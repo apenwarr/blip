@@ -1,0 +1,14 @@
+application: google.com:blip
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /blip.js
+  static_files: blip.js
+  upload: blip.js
+
+- url: /
+  static_files: index.html
+  upload: index.html

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <style>
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  #blipchart {
+    background: #eef;
+    height: 100%;
+    width: 100%;
+  }
+  </style>
+</head>
+<body>
+<canvas id='blipchart'></canvas>
+<script src='//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
+<script src='blip.js'></script>
+<script>
+
+var fixSize = function() {
+  $('#blipchart').width(window.innerWidth).height(window.innerHeight);
+}
+
+$(window).resize(fixSize).ready(fixSize);
+
+</script>
+</body>
+</html>
