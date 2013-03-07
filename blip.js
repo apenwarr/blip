@@ -6,48 +6,70 @@ if (window.performance && window.performance.now) {
   now = function() { return new Date().getTime(); };
 }
 
-var ctx = $('#blipchart')[0].getContext('2d');
+var canvas = $('#blipchart')[0];
+canvas.width = 1000;
+canvas.height = 100;
+var ctx = canvas.getContext('2d');
 var delay = 10;
 var range = 500;
+var current_x = 0;
+var blips = [];
 
-var tmfunc = function(color, url, x) {
-  var startTime = now();
-  var gotblip = function() {
-    var endTime = now();
-    var msecs = endTime - startTime;
-    var y = ctx.canvas.height-(msecs*ctx.canvas.height/range);
-    //console.debug('blip', url, msecs);
-    ctx.setFillColor('rgba(255,255,255,0.1)');
-    ctx.fillRect(x, 0, 10, ctx.canvas.height);
-    ctx.setFillColor(color);
-    ctx.fillRect(x, y, 2, 2);
-    x = (x + 1) % ctx.canvas.width;
-    setup_tmfunc(color, url, x, delay - msecs);
-  }
-  $.ajax({
-    'url': url,
-    crossDomain: false,
-    success: gotblip,
-    error: gotblip
-  });
-};
-
-var setup_tmfunc = function(color, url, x, when) {
-  if (running) {
-    setTimeout(function() { tmfunc(color, url, x); }, when);
-  } else {
-    setTimeout(function() { setup_tmfunc(color, url, x, delay); });
-  }
+var addBlip = function(color, url) {
+  blips.push({color: color, url: url});
 }
 
-var grapher = function(color, url) {
-  tmfunc(color, url, 0);
+var gotBlip = function(color, url, x, startTime) {
+  var endTime = now();
+  var msecs = endTime - startTime;
+  var y = canvas.height - (Math.log(msecs)/Math.log(10) * canvas.height / 4.0);
+  if (msecs >= range) {
+    ctx.setFillColor('#f00');
+    ctx.fillRect(x - 1, y - 1, 3, 4);
+  }
+  ctx.setFillColor(color);
+  ctx.fillRect(x, y, 2, 2);
+  addBlip(color, url);
+}
+
+var startBlips = function() {
+  while (blips.length) {
+    var blip = blips.shift();
+    var createResult = function(blip) {
+      var startTime = now();
+      var result = function() {
+	gotBlip(blip.color, blip.url, current_x, startTime);
+      }
+      return result;
+    }
+    var result = createResult(blip);
+    $.ajax({
+      'url': blip.url,
+      crossDomain: false,
+      success: result,
+      error: result,
+      timeout: range
+    });
+  }
 };
+
+var gotTick = function() {
+  if (running) {
+    startBlips();
+    current_x = (current_x + 1) % canvas.width;
+    ctx.setFillColor('rgba(128,128,128,1.0)');
+    ctx.fillRect(current_x + 4, 0, 1, canvas.height);
+    ctx.setFillColor('rgba(255,255,255,1.0)');
+    ctx.fillRect(current_x, 0, 2, canvas.height);
+  }
+  setTimeout(gotTick, delay);
+}
 
 var enableBlip = function(enable) {
   running = enable;
 }
 
-grapher('rgba(255,0,0,0.5)', 'http://8.8.8.8:53/blip');
-grapher('rgba(0,255,0,0.5)', 'http://gstatic.com/generate_204');
-grapher('rgba(0,0,255,0.5)', 'http://apenwarr.ca/blip');
+//addBlip('rgba(255,0,0,0.8)', 'http://8.8.8.8:53/blip');
+addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204');
+addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip');
+gotTick();
