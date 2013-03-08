@@ -12,7 +12,7 @@ canvas.height = 200;
 var ctx = canvas.getContext('2d');
 var xofs = 50;
 var delay = 10;
-var range = 500;
+var range = 1000;
 var log_range = Math.log(range * 1.5);
 var current_x = 0;
 var blips = [];
@@ -68,14 +68,13 @@ var gotTick = function() {
     ctx.setFillColor('rgba(255,255,255,1.0)');
     ctx.fillRect(current_x + xofs, 0, 2, canvas.height);
   }
-  setTimeout(gotTick, delay);
 }
 
 var toggleBlip = function() {
   running = !running;
 }
 
-var labels = [ 2, 5, 10, 20, 50, 100, 200, 400 ];
+var labels = [ 2, 5, 10, 20, 50, 100, 200, 500, 1000 ];
 ctx.setFillColor('black');
 ctx.textBaseline = 'middle';
 ctx.textAlign = 'right';
@@ -90,4 +89,4 @@ ctx.scale(1/3, 1);
 //addBlip('rgba(255,0,0,0.8)', 'http://8.8.8.8:53/blip');
 addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204');
 addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip/');
-gotTick();
+setInterval(gotTick, delay);
