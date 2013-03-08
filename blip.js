@@ -71,8 +71,8 @@ var gotTick = function() {
   setTimeout(gotTick, delay);
 }
 
-var enableBlip = function(enable) {
-  running = enable;
+var toggleBlip = function() {
+  running = !running;
 }
 
 var labels = [ 2, 5, 10, 20, 50, 100, 200, 400 ];
@@ -89,5 +89,5 @@ ctx.scale(1/3, 1);
 
 //addBlip('rgba(255,0,0,0.8)', 'http://8.8.8.8:53/blip');
 addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204');
-addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip');
+addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip/');
 gotTick();

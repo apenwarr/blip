@@ -11,26 +11,9 @@
     height: 100%;
     width: 100%;
   }
-  #menu {
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 3em;
-    width: 10em;
-    text-align: right;
-  }
-  #menu input {
-    padding: 1em;
-    margin: 1em;
-    background: #eef;
-  }
   </style>
 </head>
 <body>
-<div id='menu'>
-  <input type='checkbox' name='run' id='run' checked
-    ><label for='run'>Run</label></input>
-</div>
 <canvas id='blipchart'></canvas>
 <script src='//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
 <script src='blip.js'></script>
@@ -41,9 +24,7 @@ var fixSize = function() {
 }
 
 $(window).resize(fixSize).ready(fixSize);
-$('#run').click(function() {
-  enableBlip($('#run')[0].checked);
-});
+$(window).click(toggleBlip);
 
 </script>
 </body>
