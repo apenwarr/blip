@@ -41,7 +41,11 @@ var BlipCanvas = function(canvas, width) {
   }
   
   this.nextX = function(msecs) {
-    var x_inc = parseInt(msecs / delay) / this.xdiv;
+    var steps = parseInt(msecs / delay);
+    if (steps > 100) {
+      steps = 100;
+    }
+    var x_inc = steps / this.xdiv;
     var new_x = (this.current_x + x_inc) % (this.canvas.width - this.xofs);
     this.ctx.setFillColor('rgba(128,128,128,1.0)');
     this.ctx.fillRect(this.current_x + this.xofs + 4, 0,
@@ -66,7 +70,7 @@ var BlipCanvas = function(canvas, width) {
       this.ctx.fillRect(x - 2, y - 1, 3, 4);
     }
     this.ctx.setFillColor(color);
-    this.ctx.fillRect(x - 1, y - 2, 2, 4);
+    this.ctx.fillRect(x - 1, y - 3, 2, 6);
   }
 }
 
