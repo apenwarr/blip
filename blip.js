@@ -70,22 +70,30 @@ var startBlips = function() {
 var lastTick = now();
 var gotTick = function() {
   var t = now();
-  if (running && t - lastTick >= delay) {
-    startBlips();
-    var x_inc = parseInt((t - lastTick)/delay);
-    var new_x = (current_x + x_inc) % (canvas.width - xofs);
-    ctx.setFillColor('rgba(128,128,128,1.0)');
-    ctx.fillRect(current_x + xofs + 4, 0, x_inc, canvas.height);
-    ctx.setFillColor('rgba(255,255,255,1.0)');
-    ctx.fillRect(current_x + xofs, 0, x_inc + 1, canvas.height);
-    lastTick = t;
-    current_x = new_x;
+  if (running) {
+    if (t - lastTick >= delay) {
+      startBlips();
+      var x_inc = parseInt((t - lastTick)/delay);
+      var new_x = (current_x + x_inc) % (canvas.width - xofs);
+      ctx.setFillColor('rgba(128,128,128,1.0)');
+      ctx.fillRect(current_x + xofs + 4, 0, x_inc, canvas.height);
+      ctx.setFillColor('rgba(255,255,255,1.0)');
+      ctx.fillRect(current_x + xofs, 0, x_inc + 1, canvas.height);
+      lastTick = t;
+      current_x = new_x;
+    }
+    nextFrame(gotTick);
   }
-  nextFrame(gotTick);
 }
 
 var toggleBlip = function() {
-  running = !running;
+  if (running) {
+    running = 0;
+  } else {
+    running = 1;
+    lastTick = now();
+    nextFrame(gotTick);
+  }
 }
 
 var labels = [ 2, 5, 10, 20, 50, 100, 200, 500, 1000 ];
