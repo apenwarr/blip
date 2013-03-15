@@ -15,17 +15,32 @@ var nextFrame =
     };
 var range = 1000;
 var log_range = Math.log(range * 1.5);
-var delay = 10;
+var default_delay = 1000;
+var absolute_mindelay = 10;
+var mindelay = default_delay;
+
+var updateMinDelay = function() {
+  $.getJSON('/mindelay', function(data) {
+    var newdelay = parseInt(data);
+    if (newdelay >= absolute_mindelay) {
+      mindelay = newdelay;
+    } else {
+      mindelay = default_delay;
+    }
+    setTimeout(updateMinDelay, 10000);
+  });
+}
+updateMinDelay();
 
 var BlipCanvas = function(canvas, width) {
   this.canvas = canvas;
   this.canvas.width = 1000;
   this.canvas.height = 200;
   this.ctx = this.canvas.getContext('2d');
-  this.xofs = 50;
+  this.xofs = 60;
   this.current_x = 0;
   this.xdiv = width / 1000;
-  
+
   this.drawYAxis = function() {
     var labels = [ 2, 5, 10, 20, 50, 100, 200, 500, 1000 ];
     this.ctx.setFillColor('black');
@@ -39,28 +54,36 @@ var BlipCanvas = function(canvas, width) {
     }
     this.ctx.scale(1/3, 1);
   }
-  
+
   this.nextX = function(msecs) {
-    var steps = parseInt(msecs / delay);
+    var steps = msecs / absolute_mindelay;
     if (steps > 100) {
       steps = 100;
     }
     var x_inc = steps / this.xdiv;
     var new_x = (this.current_x + x_inc) % (this.canvas.width - this.xofs);
+
+    // draw the new bar
     this.ctx.setFillColor('rgba(128,128,128,1.0)');
-    this.ctx.fillRect(this.current_x + this.xofs + 4, 0,
-		      x_inc, this.canvas.height);
+    this.ctx.fillRect(new_x + this.xofs + 1, 0,
+                      4, this.canvas.height);
+
+    // wipe out the old bar
     this.ctx.setFillColor('rgba(255,255,255,1.0)');
     this.ctx.fillRect(this.current_x + this.xofs, 0,
-		      x_inc + 1, this.canvas.height);
+                      x_inc + 1, this.canvas.height);
+    if (new_x < this.current_x) {
+      this.ctx.fillRect(this.xofs, 0,
+                        new_x - 1, this.canvas.height);
+    }
     this.current_x = new_x;
   }
 
   this.msecToY = function(msecs) {
     return this.canvas.height -
-	(Math.log(msecs) * this.canvas.height / log_range);
+        (Math.log(msecs) * this.canvas.height / log_range);
   }
-  
+
   this.drawBlip = function(color, startTime, endTime) {
     var msecs = endTime - startTime;
     var y = this.msecToY(msecs);
@@ -96,7 +119,7 @@ var startBlips = function() {
     var createResult = function(blip) {
       var startTime = now();
       var result = function() {
-	gotBlip(blip.color, blip.url, startTime);
+        gotBlip(blip.color, blip.url, startTime);
       }
       return result;
     }
@@ -111,14 +134,18 @@ var startBlips = function() {
   }
 };
 
-var lastTick = now();
+var lastTick = now(), lastStart = lastTick;
 var gotTick = function() {
   var t = now();
+  var tdiff = t - lastTick;
   if (running) {
-    if (t - lastTick >= delay) {
-      startBlips();
-      c1.nextX(t - lastTick);
-      c2.nextX(t - lastTick);
+    if (tdiff >= absolute_mindelay) {
+      if (t - lastStart > mindelay) {
+        startBlips();
+        lastStart = t;
+      }
+      c1.nextX(tdiff);
+      c2.nextX(tdiff);
       lastTick = t;
     }
     nextFrame(gotTick);
