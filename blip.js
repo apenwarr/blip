@@ -27,7 +27,11 @@ var updateMinDelay = function() {
     } else {
       mindelay = default_delay;
     }
-    setTimeout(updateMinDelay, 10000);
+
+    // sigh, unfortunately this periodic update causes a periodic glitch in
+    // the measurements... but it's important in case the server needs to slow
+    // us down under load.
+    setTimeout(updateMinDelay, 60000);
   });
 }
 updateMinDelay();

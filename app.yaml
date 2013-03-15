@@ -10,9 +10,7 @@ handlers:
   upload: blip.js
 
 - url: /mindelay
-  static_files: mindelay.txt
-  upload: mindelay.txt
-#  script: app.wsgi_app
+  script: app.wsgi_app
 
 - url: /
   static_files: index.html
