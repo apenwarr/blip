@@ -44,7 +44,7 @@ var updateMinDelay = function() {
   // the same, *or* please also change the code to ping your own servers,
   // and then it's your problem.  Thanks!
   //    -- apenwarr, 2013/04/26
-  $.getJSON('//gfblip.appspot.com/mindelay?callback=?', function(data) {
+  $.getJSON('https://gfblip.appspot.com/mindelay?callback=?', function(data) {
     var newdelay = parseInt(data);
     if (newdelay >= absolute_mindelay) {
       mindelay = newdelay;
