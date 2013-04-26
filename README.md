@@ -1,13 +1,13 @@
-
 blip: a tool for seeing your Internet latency
 =============================================
-
 Tip:
 ----
 
 On your PC, laptop, tablet, phone, or iPod, try adding a
 bookmark to http://gfblip.appspot.com/ to your home screen
 for easy access.
+
+<img src="http://chart.googleapis.com/chart?cht=qr&chs=150x150&choe=UTF-8&chld=H&chl=http://gfblip.appspot.com/">
 
 
 Too long, don't read:
