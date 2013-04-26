@@ -168,10 +168,8 @@ var startBlips = function() {
     $.ajax({
       'url': blip.url,
       crossDomain: false,
-      success: result,
-      error: result,
       timeout: range
-    });
+    }).complete(result);
   }
 };
 
