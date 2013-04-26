@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import re
 import time
 import webapp2
 from google.appengine.api import memcache
@@ -44,6 +45,11 @@ class MinDelayPage(webapp2.RequestHandler):
     qps = MAX_TOTAL_QPS / nclients
     delay_msec = max(MIN_DELAY_MSEC, 1000. / qps)
     self.response.headers['Content-Type'] = 'application/json'
-    self.response.out.write(str(int(delay_msec)))
+    json = str(int(delay_msec))
+    callback = self.request.params.get('callback')
+    if callback and re.match(r'^\w+$', callback):
+      self.response.out.write('%s(%s);' % (callback, json))
+    else:
+      self.response.out.write(json)
 
 wsgi_app = webapp2.WSGIApplication([('/mindelay', MinDelayPage)])

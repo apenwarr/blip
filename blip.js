@@ -35,7 +35,15 @@ var absolute_mindelay = 10;
 var mindelay = default_delay;
 
 var updateMinDelay = function() {
-  $.getJSON('/mindelay', function(data) {
+  // Hi there!  This program is open source, so you have the ability to make
+  // your own copy of it, which might change or remove this mindelay
+  // calculation.  However, if you do that, you might unintentionally cause
+  // the servers we point at to get overloaded.  So we'd appreciate it if
+  // you leave this mindelay calculation (including the mindelay URL below)
+  // the same, *or* please also change the code to ping your own servers,
+  // and then it's your problem.  Thanks!
+  //    -- apenwarr, 2013/04/26
+  $.getJSON('//gfblip.appspot.com/mindelay?callback=?', function(data) {
     var newdelay = parseInt(data);
     if (newdelay >= absolute_mindelay) {
       mindelay = newdelay;
@@ -183,7 +191,24 @@ var toggleBlip = function() {
 
 c1.drawYAxis();
 
-//addBlip('rgba(255,0,0,0.8)', 'http://8.8.8.8:53/blip');
+// Hi there!  The people at Google who monitor traffic on gstatic.com were
+// kind enough to let us use their server in this tool.  Because gstatic.com
+// latency is very low almost anywhere in the world, blip will generate a
+// higher volume of traffic (up to 100 queries per second per client!) than
+// most other sites you might ping.  This is great for measurement accuracy,
+// but is a bit impolite if you do it in an uncontrolled way.  Blip uses the
+// mindelay server, up above, to try to scale things back if a lot of people
+// run blip all at once.  If you're modifying blip and you significantly
+// change the kind of traffic it generates, especially if you change the
+// mindelay calculation (see above), then please be a good Internet citizen
+// and find a different server to ping.
+//     -- apenwarr, 2013/04/26
 addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204');
+
+// Nobody really cares about apenwarr.ca, which is just hosted on a cheap
+// VPS somewhere.  If you overload it, I guess I'll be sort of impressed
+// that you like my program.  So, you know, whatever.
+//     -- apenwarr, 2013/04/26
 addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip/');
+
 nextFrame(gotTick);
