@@ -71,7 +71,7 @@ var BlipCanvas = function(canvas, width) {
 
   this.drawYAxis = function() {
     var labels = [ 2, 5, 10, 20, 50, 100, 200, 500, 1000 ];
-    this.ctx.setFillColor('black');
+    this.ctx.fillStyle = 'black';
     this.ctx.textBaseline = 'middle';
     this.ctx.textAlign = 'right';
     this.ctx.scale(3, 1);
@@ -92,12 +92,12 @@ var BlipCanvas = function(canvas, width) {
     var new_x = (this.current_x + x_inc) % (this.canvas.width - this.xofs);
 
     // draw the new bar
-    this.ctx.setFillColor('rgba(128,128,128,1.0)');
+    this.ctx.fillStyle = 'rgba(128,128,128,1.0)';
     this.ctx.fillRect(new_x + this.xofs + 1, 0,
                       4, this.canvas.height);
 
     // wipe out the old bar
-    this.ctx.setFillColor('rgba(255,255,255,1.0)');
+    this.ctx.fillStyle = 'rgba(255,255,255,1.0)';
     this.ctx.fillRect(this.current_x + this.xofs, 0,
                       x_inc + 1, this.canvas.height);
     if (new_x < this.current_x) {
@@ -130,10 +130,10 @@ var BlipCanvas = function(canvas, width) {
     var y = this.msecToY(msecs);
     var x = this.current_x + this.xofs;
     if (msecs >= range) {
-      this.ctx.setFillColor('#f00');
+      this.ctx.fillStyle = '#f00';
       this.ctx.fillRect(x - 2, y - 1, 3, 4);
     }
-    this.ctx.setFillColor(color);
+    this.ctx.fillStyle = color;
     this.ctx.fillRect(x - 1, y - 3, 2, 6);
   }
 }
