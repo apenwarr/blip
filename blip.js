@@ -112,9 +112,9 @@ var BlipCanvas = function(canvas, width) {
         (Math.log(msecs) * this.canvas.height / log_range);
   }
 
-  this.drawBlip = function(color, startTime, endTime) {
+  this.drawBlip = function(color, startTime, endTime, minlatency) {
     var msecs = endTime - startTime;
-    if (msecs < 5) {
+    if (msecs < minlatency) {
       // impossibly short; that implies we're not actually reaching the
       // remote end, probably because we're entirely offline
       lastBotch = endTime;
@@ -143,15 +143,15 @@ var c2 = new BlipCanvas($('#lores')[0], 10000);
 
 var blips = [];
 
-var addBlip = function(color, url) {
-  blips.push({color: color, url: url});
+var addBlip = function(color, url, minlatency) {
+  blips.push({color: color, url: url, minlatency: minlatency});
 }
 
-var gotBlip = function(color, url, startTime) {
+var gotBlip = function(color, url, minlatency, startTime) {
   var endTime = now();
-  c1.drawBlip(color, startTime, endTime);
-  c2.drawBlip(color, startTime, endTime);
-  addBlip(color, url);
+  c1.drawBlip(color, startTime, endTime, minlatency);
+  c2.drawBlip(color, startTime, endTime, minlatency);
+  addBlip(color, url, minlatency);
 }
 
 var startBlips = function() {
@@ -160,7 +160,7 @@ var startBlips = function() {
     var createResult = function(blip) {
       var startTime = now();
       var result = function() {
-        gotBlip(blip.color, blip.url, startTime);
+        gotBlip(blip.color, blip.url, blip.minlatency, startTime);
       }
       return result;
     }
@@ -217,12 +217,12 @@ c1.drawYAxis();
 // mindelay calculation (see above), then please be a good Internet citizen
 // and find a different server to ping.
 //     -- apenwarr, 2013/04/26
-addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204');
+addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204', 0);
 
 // Nobody really cares about apenwarr.ca, which is just hosted on a cheap
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip/');
+addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip/', 5);
 
 nextFrame(gotTick);
