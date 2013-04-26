@@ -33,6 +33,7 @@ var log_range = Math.log(range * 1.5);
 var default_delay = 1000;
 var absolute_mindelay = 10;
 var mindelay = default_delay;
+var lastBotch = 0;
 
 var updateMinDelay = function() {
   // Hi there!  This program is open source, so you have the ability to make
@@ -113,6 +114,19 @@ var BlipCanvas = function(canvas, width) {
 
   this.drawBlip = function(color, startTime, endTime) {
     var msecs = endTime - startTime;
+    if (msecs < 5) {
+      // impossibly short; that implies we're not actually reaching the
+      // remote end, probably because we're entirely offline
+      lastBotch = endTime;
+    }
+    if (endTime > 2100 && endTime - lastBotch < 2100) {
+      // if there were any "offline" problems recently, there might be
+      // a bit of jitter where some of the requests are a bit slower than
+      // the impossible timeout, but that doesn't mean it's working yet.
+      // So stop reporting for a minimum amount of time.  During that time,
+      // we just want to show an error.
+      msecs = 1000;
+    }
     var y = this.msecToY(msecs);
     var x = this.current_x + this.xofs;
     if (msecs >= range) {
