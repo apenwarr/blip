@@ -15,23 +15,59 @@
     background: #fff;
     display: block;
   }
+  .legend {
+    text-align: right;
+    padding-right: 2em;
+    padding-top: 0.5em;
+    font-family: Arial;
+  }
+  .legend span {
+    padding-left: 2em;
+  }
+  .dnslegend form {
+    display: inline;
+  }
+  .dnslegend form label {
+    margin: -1em;
+    padding: 1em;
+    font-weight: bold;
+  }
+  .dnslegend form label:hover {
+    background: #ff8;
+  }
   </style>
 </head>
 <body>
+<div class='legend'>
+  <span class='dnslegend' style='color: rgba(0,0,0,0.8)'>
+    <form>
+      <label for="wantdns">
+      <input type='checkbox' name='wantdns' id='wantdns'>
+      DNS
+      </label>
+    </form>
+  </span>
+  <span style='color: rgba(0,192,0,0.8)'>o gstatic.com</span>
+  <span style='color: rgba(0,0,255,0.8)'>o Internet</span>
+</div>
 <canvas class='blipchart' id='hires'></canvas>
 <canvas class='blipchart' id='lores'></canvas>
+<canvas class='blipchart' id='vlores'></canvas>
 <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
 <script src='blip.js'></script>
 <script>
 
 var fixSize = function() {
-  var h1 = window.innerHeight * 0.9;
-  $('#hires').width(window.innerWidth).height(h1);
-  $('#lores').width(window.innerWidth).height(window.innerHeight - h1);
+  var hmain = window.innerHeight - $('.legend')[0].clientHeight;
+  var h1 = Math.round(hmain * 0.05);
+  $('#hires').width(window.innerWidth).height(hmain - 3 * h1);
+  $('#lores').width(window.innerWidth).height(h1 * 2);
+  $('#vlores').width(window.innerWidth).height(h1);
 }
 
 $(window).resize(fixSize).ready(fixSize);
 $('.blipchart').click(toggleBlip);
+$('#wantdns').change(toggleDns);
 
 </script>
 </body>

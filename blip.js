@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+'use strict';
 var running = true;
+var wantDns = false;
 var now;
 if (window.performance && window.performance.now) {
   now = function() { return window.performance.now(); };
@@ -28,7 +30,7 @@ var nextFrame =
     function(callback) {
       setTimeout(callback, 1000 / 60);
     };
-var range = 1000;
+var range = 2200;
 var log_range = Math.log(range * 1.5);
 var default_delay = 1000;
 var absolute_mindelay = 10;
@@ -57,31 +59,36 @@ var updateMinDelay = function() {
     // us down under load.
     setTimeout(updateMinDelay, 60000);
   });
-}
+};
 updateMinDelay();
 
 var BlipCanvas = function(canvas, width) {
   this.canvas = canvas;
   this.canvas.width = 1000;
-  this.canvas.height = 200;
+  this.canvas.height = 1000;
   this.ctx = this.canvas.getContext('2d');
-  this.xofs = 60;
+  this.xofs = 100;
   this.current_x = 0;
   this.xdiv = width / 1000;
 
   this.drawYAxis = function() {
-    var labels = [ 2, 5, 10, 20, 50, 100, 200, 500, 1000 ];
+    var labels = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
     this.ctx.fillStyle = 'black';
     this.ctx.textBaseline = 'middle';
     this.ctx.textAlign = 'right';
-    this.ctx.scale(3, 1);
-    this.ctx.font = '8px Arial';
+    this.ctx.font = '32px Arial';
     for (var i = 0; i < labels.length; i++) {
       var msecs = labels[i];
-      this.ctx.fillText(msecs, (this.xofs - 5) / 3, this.msecToY(msecs));
+      this.ctx.fillText(msecs, (this.xofs - 10), this.msecToY(msecs));
     }
-    this.ctx.scale(1/3, 1);
-  }
+    this.ctx.scale(1, 2);
+    this.ctx.textAlign = 'center';
+    this.ctx.rotate(-Math.PI / 2);
+    this.ctx.font = '24px Arial';
+    this.ctx.fillText('milliseconds', -this.canvas.height / 2 / 2, 16);
+    this.ctx.rotate(Math.PI / 2);
+    this.ctx.scale(1, 1 / 2);
+  };
 
   this.nextX = function(msecs) {
     var steps = msecs / absolute_mindelay;
@@ -105,14 +112,14 @@ var BlipCanvas = function(canvas, width) {
                         new_x - 1, this.canvas.height);
     }
     this.current_x = new_x;
-  }
+  };
 
   this.msecToY = function(msecs) {
     return this.canvas.height -
         (Math.log(msecs) * this.canvas.height / log_range);
-  }
+  };
 
-  this.drawBlip = function(color, startTime, endTime, minlatency) {
+  this.drawBlip = function(color, startTime, endTime, minlatency, width) {
     var msecs = endTime - startTime;
     if (msecs < minlatency) {
       // impossibly short; that implies we're not actually reaching the
@@ -125,51 +132,68 @@ var BlipCanvas = function(canvas, width) {
       // the impossible timeout, but that doesn't mean it's working yet.
       // So stop reporting for a minimum amount of time.  During that time,
       // we just want to show an error.
-      msecs = 1000;
+      msecs = range;
     }
     var y = this.msecToY(msecs);
     var x = this.current_x + this.xofs;
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(x - width, y - 15, 1 + width, 30);
     if (msecs >= range) {
       this.ctx.fillStyle = '#f00';
-      this.ctx.fillRect(x - 2, y - 1, 3, 4);
+      this.ctx.fillRect(x - 1 - width, y - 5, 2 + width, 20);
     }
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(x - 1, y - 3, 2, 6);
-  }
-}
+  };
+};
 
 var c1 = new BlipCanvas($('#hires')[0], 1000);
 var c2 = new BlipCanvas($('#lores')[0], 10000);
+var c3 = new BlipCanvas($('#vlores')[0], 100000);
 
 var blips = [];
 
 var addBlip = function(color, url, minlatency) {
   blips.push({color: color, url: url, minlatency: minlatency});
-}
+};
 
 var gotBlip = function(color, url, minlatency, startTime) {
   var endTime = now();
-  c1.drawBlip(color, startTime, endTime, minlatency);
-  c2.drawBlip(color, startTime, endTime, minlatency);
+  c1.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
+  c2.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
+  c3.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
   addBlip(color, url, minlatency);
-}
+};
 
 var startBlips = function() {
   while (blips.length) {
     var blip = blips.shift();
-    var createResult = function(blip) {
-      var startTime = now();
-      var result = function() {
-        gotBlip(blip.color, blip.url, blip.minlatency, startTime);
+    if (!blip.url && !wantDns) {
+      var createResult = function(blip) {
+        return function() {
+          addBlip(blip.color, blip.url, blip.minlatency);
+        }
+      };
+      var result = createResult(blip);
+      setTimeout(result, 1000);
+    } else {
+      var createResult = function(blip) {
+        var startTime = now();
+        var result = function() {
+          gotBlip(blip.color, blip.url, blip.minlatency, startTime);
+        };
+        return result;
+      };
+      var result = createResult(blip);
+      var url = blip.url;
+      if (!blip.url) {
+        url = ('http://' + Math.random() +
+               'random.gfblip.appspot.com/generate_204');
       }
-      return result;
+      $.ajax({
+        'url': url,
+        crossDomain: false,
+        timeout: range
+      }).complete(result);
     }
-    var result = createResult(blip);
-    $.ajax({
-      'url': blip.url,
-      crossDomain: false,
-      timeout: range
-    }).complete(result);
   }
 };
 
@@ -185,11 +209,12 @@ var gotTick = function() {
       }
       c1.nextX(tdiff);
       c2.nextX(tdiff);
+      c3.nextX(tdiff);
       lastTick = t;
     }
     nextFrame(gotTick);
   }
-}
+};
 
 var toggleBlip = function() {
   if (running) {
@@ -199,7 +224,11 @@ var toggleBlip = function() {
     lastTick = now();
     nextFrame(gotTick);
   }
-}
+};
+
+var toggleDns = function() {
+  wantDns = !wantDns;
+};
 
 c1.drawYAxis();
 
@@ -217,10 +246,42 @@ c1.drawYAxis();
 //     -- apenwarr, 2013/04/26
 addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204', 0);
 
+// This also ends up using Google resources, so see above.  But in this case,
+// we trigger a new DNS lookup every time, so it's a good test to see if
+// your DNS server is flakey.
+// TODO(apenwarr): figure out whether this is too impactful or not.
+addBlip('rgba(0,0,0,1.0)', null, 5);
+
+// Pick an Internet site with reasonably high latency (at least, higher than
+// the usually-very-low-latency gstatic.com) to add contrast to the graph.
+//
 // Nobody really cares about apenwarr.ca, which is just hosted on a cheap
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-addBlip('rgba(0,0,255,0.8)', 'http://apenwarr.ca/blip/', 5);
+var trySites = [
+  'http://apenwarr.ca/blip/',
+  'http://eqldata.com/blip/'
+];
+var remainingSites = trySites.length;
+
+for (var i = 0; i < trySites.length; i++) {
+  var url = trySites[i];
+  var makeGotAnswer = function(url) {
+    function gotAnswer() {
+      remainingSites--;
+      if (!remainingSites) {
+        // last one standing! it must have the worst latency of the bunch.
+        addBlip('rgba(0,0,255,0.8)', url, 5);
+      }
+    }
+    return gotAnswer;
+  };
+  $.ajax({
+    'url': url,
+    crossDomain: false,
+    timeout: range
+  }).complete(makeGotAnswer(url));
+}
 
 nextFrame(gotTick);
