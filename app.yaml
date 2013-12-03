@@ -1,5 +1,5 @@
 application: s~gfblip
-version: 5
+version: 6
 runtime: python27
 api_version: 1
 threadsafe: true

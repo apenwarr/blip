@@ -244,7 +244,9 @@ c1.drawYAxis();
 // mindelay calculation (see above), then please be a good Internet citizen
 // and find a different server to ping.
 //     -- apenwarr, 2013/04/26
-addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204', 0);
+var addGstatic = function() {
+  addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204', 0);
+};
 
 // This also ends up using Google resources, so see above.  But in this case,
 // we trigger a new DNS lookup every time, so it's a good test to see if
@@ -259,19 +261,22 @@ addBlip('rgba(0,0,0,1.0)', null, 5);
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-var trySites = [
+var trySlowSites = [
   'http://apenwarr.ca/blip/',
   'http://eqldata.com/blip/'
 ];
-var remainingSites = trySites.length;
+var remainingSlowSites = trySlowSites.length;
 
-for (var i = 0; i < trySites.length; i++) {
-  var url = trySites[i];
+for (var i = 0; i < trySlowSites.length; i++) {
+  var url = trySlowSites[i];
   var makeGotAnswer = function(url) {
     function gotAnswer() {
-      remainingSites--;
-      if (!remainingSites) {
+      remainingSlowSites--;
+      if (!remainingSlowSites) {
         // last one standing! it must have the worst latency of the bunch.
+        var hostmatch = RegExp('//([^/]*)');
+        var host = hostmatch.exec(url)[1];
+        $('#internetlegend').text('o ' + host);
         addBlip('rgba(0,0,255,0.8)', url, 5);
       }
     }
@@ -283,5 +288,56 @@ for (var i = 0; i < trySites.length; i++) {
     timeout: range
   }).complete(makeGotAnswer(url));
 }
+
+var tryFastSites = [
+  '192.168.0.1',
+  '192.168.0.254',
+  '192.168.1.1',
+  '192.168.1.254',
+  '192.168.2.1',
+  '192.168.2.254',
+  '10.0.0.1',
+  '10.0.0.254',
+  '10.1.1.1',
+  '10.1.1.254',
+  '10.33.4.1',
+  '10.33.4.254'
+];
+var curFastSite = 0;
+var fastest;
+
+function doneFastSite(reason, host, url, start_time) {
+  var delay = now() - start_time;
+  console.debug(reason + ' delay=' + delay + ' ' + url);
+  if (reason != 'timeout' && (!fastest || delay < fastest[0])) {
+    fastest = [delay, host, url];
+  }
+  curFastSite++;
+  if (curFastSite < tryFastSites.length) {
+    nextFastSite();
+  } else {
+    if (fastest) {
+      $('#locallegend').html('o ' + fastest[1]);
+      addBlip('rgba(0,192,0,0.8)', fastest[2], 0);
+    } else {
+      $('#locallegend').html('o gstatic.com');
+      addGstatic();
+    }
+  }
+}
+
+function nextFastSite() {
+  var host = tryFastSites[curFastSite];
+  var url = 'http://' + host + ':8999/generate_204';
+  var start_time = now();
+  $.ajax({
+    'url': url,
+    crossDomain: false,
+    timeout: 200
+  }).complete(function(e, reason) {
+    doneFastSite(reason, host, url, start_time);
+  });
+}
+nextFastSite();
 
 nextFrame(gotTick);
