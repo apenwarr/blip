@@ -52,4 +52,5 @@ class MinDelayPage(webapp2.RequestHandler):
     else:
       self.response.out.write(json)
 
+
 wsgi_app = webapp2.WSGIApplication([('/mindelay', MinDelayPage)])
