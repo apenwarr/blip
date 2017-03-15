@@ -23,6 +23,16 @@ if (window.performance && window.performance.now) {
   now = function() { return new Date().getTime(); };
 }
 
+// Sigh, not all browsers have Object.values yet.  Use the shim
+// unconditionally to avoid any obscure incompatibilities.
+var getValues = function(obj) {
+  var out = [];
+  for (var i in obj) {
+    out.push(obj[i]);
+  }
+  return out;
+}
+
 var nextFrame =
     window.requestAnimationFrame ||
     window.webkitRequestAnimationFrame ||
@@ -204,8 +214,8 @@ var gotTick = function() {
   if (running) {
     if (tdiff >= absolute_mindelay) {
       if (t - lastStart > mindelay) {
-        startBlips();
         lastStart = t;
+        startBlips();
       }
       c1.nextX(tdiff);
       c2.nextX(tdiff);
@@ -261,33 +271,85 @@ addBlip('rgba(0,0,0,1.0)', null, 5);
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-var trySlowSites = [
-  'http://apenwarr.ca/blip/',
-  'http://eqldata.com/blip/'
-];
-var remainingSlowSites = trySlowSites.length;
-
-for (var i = 0; i < trySlowSites.length; i++) {
-  var url = trySlowSites[i];
-  var makeGotAnswer = function(url) {
-    function gotAnswer() {
-      remainingSlowSites--;
-      if (!remainingSlowSites) {
-        // last one standing! it must have the worst latency of the bunch.
-        var hostmatch = RegExp('//([^/]*)');
-        var host = hostmatch.exec(url)[1];
-        $('#internetlegend').text('o ' + host);
-        addBlip('rgba(0,0,255,0.8)', url, 5);
-      }
+$.ajax({
+  'url': 'https://mlab-ns.appspot.com/ndt?policy=all',
+  crossDomain: true,
+}).success(function(ndt) {
+  // We want the selected hostname to be reasonably stable across page reloads
+  // from a single location, even on separate devices.  To help with this,
+  // choose only from the first server in the first city in each country.
+  // The latency between countries is hopefully different enough that there
+  // should be little jitter.
+  //
+  // TODO(apenwarr): think about reducing the country list to 2 per region?
+  //   Africa          Johannesburg-ZA, Nairobi-KE
+  //   Australia       Auckland-NZ
+  //   Asia            Bangkok-TH, Taipei-TW
+  //   Western EU      Dublin-IE, Stockholm-SE
+  //   Eastern EU      Belgrade-RS
+  //   NA              Seattle_WA-US, New York_NY-US
+  //   SA              Bogota-CO
+  //
+  var hosts = [];
+  for (var i in ndt) {
+    hosts.push([ndt[i].country, ndt[i].city, ndt[i].url]);
+  }
+  hosts.sort();
+  var one_per_country = {};
+  for (var i in hosts) {
+    var country = hosts[i][0];
+    var city = hosts[i][1];
+    var url = hosts[i][2];
+    if (!one_per_country[country]) {
+      one_per_country[country] = {
+        where: city + ', ' + country,
+        url: url,
+        rttList: []
+      };
     }
-    return gotAnswer;
-  };
-  $.ajax({
-    'url': url,
-    crossDomain: false,
-    timeout: range
-  }).complete(makeGotAnswer(url));
-}
+  }
+
+  var roundsDone = 0;
+  var outstanding = 0;
+  var doRound = function() {
+    for (var ci in one_per_country) {
+      (function() {
+        var v = one_per_country[ci];
+        var startTime = now();
+        outstanding++;
+        $.ajax({
+          'url': v.url,
+          crossDomain: false,
+          timeout: range
+        }).complete(function() {
+          v.rttList.push(now() - startTime);
+          outstanding--;
+          console.log('outstanding', outstanding);
+          if (!outstanding) {
+            roundsDone++;
+            if (roundsDone < 3) {
+              doRound();
+            } else {
+              console.log(one_per_country);
+              var results = getValues(one_per_country);
+              results.sort(function(a, b) {
+                return (Math.min.apply(Math, a.rttList) -
+                        Math.min.apply(Math, b.rttList));
+              });
+              console.log(results);
+              // Pick an entry at least one city away
+              var best = results[1];
+              $('#internetlegend').text('o ' + best.where);
+              addBlip('rgba(0,0,255,0.8)', best.url, 5);
+            }
+          }
+        });
+      })();
+    }
+  }
+  doRound();
+});
+
 
 var tryFastSites = [
   '192.168.0.1',
