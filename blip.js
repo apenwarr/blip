@@ -32,7 +32,7 @@ var getValues = function(obj) {
     out.push(obj[i]);
   }
   return out;
-}
+};
 
 var nextFrame =
     window.requestAnimationFrame ||
@@ -351,7 +351,7 @@ $.ajax({
         });
       })();
     }
-  }
+  };
   doRound();
 });
 
