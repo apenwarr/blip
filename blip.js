@@ -16,6 +16,7 @@
 'use strict';
 var running = true;
 var wantDns = false;
+var dnsName;
 var now;
 if (window.performance && window.performance.now) {
   now = function() { return window.performance.now(); };
@@ -195,8 +196,11 @@ var startBlips = function() {
       var result = createResult(blip);
       var url = blip.url;
       if (!blip.url) {
-        url = ('http://' + Math.random() +
-               'random.gfblip.appspot.com/generate_204');
+        // Desired URL format:
+        //   [method://][rand].random.[ndt_host].blipdns.apenwarr.ca[suffix]
+        var g = dnsName.match(/(^[^\/]*\/\/)([^:\/]*)(.*)/);
+        url = (g[1] + Math.random() +
+               'random.' + g[2] + '.blipdns.apenwarr.ca' + g[3]);
       }
       $.ajax({
         'url': url,
@@ -237,7 +241,7 @@ var toggleBlip = function() {
 };
 
 var toggleDns = function() {
-  wantDns = !wantDns;
+  wantDns = dnsName && !wantDns;
 };
 
 c1.drawYAxis();
@@ -339,6 +343,7 @@ $.ajax({
               console.log(results);
               // Pick an entry at least one city away
               var best = results[1];
+              dnsName = best.url;
               $('#internetlegend').text('o ' + best.where);
               addBlip('rgba(0,0,255,0.8)', best.url, 5);
             }
