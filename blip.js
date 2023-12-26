@@ -276,7 +276,7 @@ addBlip('rgba(0,0,0,1.0)', null, 5);
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
 $.ajax({
-  'url': 'https://mlab-ns.appspot.com/ndt?policy=all',
+  'url': 'https://mlab-ns.appspot.com/ndt_ssl?policy=all',
   crossDomain: true,
 }).success(function(ndt) {
   // We want the selected hostname to be reasonably stable across page reloads
@@ -296,14 +296,14 @@ $.ajax({
   //
   var hosts = [];
   for (var i in ndt) {
-    hosts.push([ndt[i].country, ndt[i].city, ndt[i].url]);
+    hosts.push([ndt[i].country, ndt[i].city, ndt[i].fqdn]);
   }
   hosts.sort();
   var one_per_country = {};
   for (var i in hosts) {
     var country = hosts[i][0];
     var city = hosts[i][1];
-    var url = hosts[i][2];
+    var url = 'https://' + hosts[i][2];
     if (!one_per_country[country]) {
       one_per_country[country] = {
         where: city + ', ' + country,
