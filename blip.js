@@ -15,8 +15,8 @@
  */
 'use strict';
 
-const localColor = 'rgba(0,0,255,0.8)';
-const internetColor = 'rgba(0,128,0,0.8)';
+const localColor = 'rgba(0,128,0,0.8)';
+const internetColor = 'rgba(0,0,255,0.8)';
 const dnsColor = 'rgba(0,0,0,1.0)';
 
 const vbarColor = 'rgba(128,128,128,1.0)';
