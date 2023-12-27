@@ -50,37 +50,11 @@ let nextFrame =
     function(callback) {
       setTimeout(callback, 1000 / 60);
     };
-let range = 2200;
-let log_range = Math.log(range * 1.5);
-let default_delay = 1000;
-let absolute_mindelay = 10;
-let mindelay = default_delay;
+const msecMax = 2200;
+const log_msecMax = Math.log(msecMax * 1.5);
+const absolute_mindelay = 10;
+let mindelay = absolute_mindelay;
 let lastBotch = 0;
-
-let updateMinDelay = function() {
-  // Hi there!  This program is open source, so you have the ability to make
-  // your own copy of it, which might change or remove this mindelay
-  // calculation.  However, if you do that, you might unintentionally cause
-  // the servers we point at to get overloaded.  So we'd appreciate it if
-  // you leave this mindelay calculation (including the mindelay URL below)
-  // the same, *or* please also change the code to ping your own servers,
-  // and then it's your problem.  Thanks!
-  //    -- apenwarr, 2013/04/26
-  $.getJSON('https://gfblip.appspot.com/mindelay?callback=?', function(data) {
-    let newdelay = parseInt(data);
-    if (newdelay >= absolute_mindelay) {
-      mindelay = newdelay;
-    } else {
-      mindelay = default_delay;
-    }
-
-    // sigh, unfortunately this periodic update causes a periodic glitch in
-    // the measurements... but it's important in case the server needs to slow
-    // us down under load.
-    setTimeout(updateMinDelay, 60000);
-  });
-};
-updateMinDelay();
 
 let BlipCanvas = function(canvas, width) {
   this.canvas = canvas;
@@ -136,7 +110,7 @@ let BlipCanvas = function(canvas, width) {
 
   this.msecToY = function(msecs) {
     return this.canvas.height -
-        (Math.log(msecs) * this.canvas.height / log_range);
+        (Math.log(msecs) * this.canvas.height / log_msecMax);
   };
 
   this.drawBlip = function(color, startTime, endTime, minlatency, width) {
@@ -152,13 +126,13 @@ let BlipCanvas = function(canvas, width) {
       // the impossible timeout, but that doesn't mean it's working yet.
       // So stop reporting for a minimum amount of time.  During that time,
       // we just want to show an error.
-      msecs = range;
+      msecs = msecMax;
     }
     let y = this.msecToY(msecs);
     let x = this.current_x + this.xofs;
     this.ctx.fillStyle = color;
     this.ctx.fillRect(x - width, y - 15, 1 + width, 30);
-    if (msecs >= range) {
+    if (msecs >= msecMax) {
       this.ctx.fillStyle = '#f00';
       this.ctx.fillRect(x - 1 - width, y - 5, 2 + width, 20);
     }
@@ -223,7 +197,7 @@ let startBlips = function() {
                'random.' + g[2] + '.blipdns.apenwarr.ca' + g[3]);
       }
 
-      startFetch(url, range).then(result, result);
+      startFetch(url, msecMax).then(result, result);
     }
   }
 };
@@ -263,14 +237,7 @@ let toggleDns = function() {
 
 c1.drawYAxis();
 
-// Hi there!  The people at Google who monitor traffic on gstatic.com were
-// kind enough to let us use their server in this tool.  Because gstatic.com
-// latency is very low almost anywhere in the world, blip will generate a
-// higher volume of traffic (up to 100 queries per second per client!) than
-// most other sites you might ping.  This is great for measurement accuracy,
-// but is a bit impolite if you do it in an uncontrolled way.  Blip uses the
-// mindelay server, up above, to try to scale things back if a lot of people
-// run blip all at once.  If you're modifying blip and you significantly
+// If you're modifying blip and you significantly
 // change the kind of traffic it generates, especially if you change the
 // mindelay calculation (see above), then please be a good Internet citizen
 // and find a different server to ping.
@@ -369,7 +336,7 @@ fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all').then(async function(resp
             }
           }
         }
-        startFetch(v.url, range).then(() => then(true), () => then(false));
+        startFetch(v.url, msecMax).then(() => then(true), () => then(false));
       })();
     }
   };
