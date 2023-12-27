@@ -409,7 +409,7 @@ function nextFastSite() {
   let host = tryFastSites[curFastSite];
   let url = 'http://' + host + ':8999/generate_204';
   let start_time = now();
-  startFetch(url, 200).then(function(response) {
+  startFetch(url, 400).then(function(response) {
     doneFastSite(response.ok, response, host, url, start_time);
   }, function(e) {
     let ok = e instanceof TypeError
@@ -417,19 +417,24 @@ function nextFastSite() {
   });
 }
 
-function start() {
+async function start() {
   c1.drawYAxis();
 
   // This one uses apenwarr.ca by default. Please be polite if modifying
   // blip to send a lot more traffic than usual.
   addBlip(dnsColor, null, 5);
 
+  // this starts the polling and animation
+  bestNextFrame(gotTick);
+
   // this will async add the "Internet" blip
   startPickingMlabSite();
 
   // this will async add the "local-ish" blip
+  let cipr = await fetch('https://apenwarr.ca/blip/clientip');
+  let ciprj = await cipr.json();
+  let cip = ciprj['client_ip'];
+  console.log('clientip', cip);
+  tryFastSites.unshift(cip);
   nextFastSite();
-
-  // this starts the polling and animation
-  bestNextFrame(gotTick);
 }
