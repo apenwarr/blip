@@ -1,14 +1,9 @@
-runtime: python27
-api_version: 1
-threadsafe: true
+runtime: python312
 
 handlers:
 - url: /blip.js
   static_files: blip.js
   upload: blip.js
-
-- url: /mindelay
-  script: app.wsgi_app
 
 - url: /
   static_files: index.html
