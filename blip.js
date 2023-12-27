@@ -293,7 +293,8 @@ async function startPickingMlabSite() {
   }
 
   let hostsFinished = 0;
-  const needHosts = Math.floor(Object.keys(hosts).length / 2);
+  const need1 = Math.floor(Object.keys(hosts).length / 4), need2 = 10;
+  const needHosts = need1 < need2 ? need2 : need1;
   let pickBest;
   let queue = [];
 
@@ -321,7 +322,8 @@ async function startPickingMlabSite() {
     } else {
       hostsFinished++;
       if (hostsFinished <= needHosts) {
-        console.log('Tested #' + hostsFinished + ':',
+        console.log('Tested #' + hostsFinished +
+            ' (target ' + needHosts + '):',
             Math.round(h.rtt) + 'ms',
             h.where, 'qlen', queue.length);
       }
