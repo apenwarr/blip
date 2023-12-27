@@ -133,7 +133,7 @@ function BlipCanvas(canvas, width) {
     let y = this.msecToY(msecs);
     let x = this.current_x + this.xofs;
     this.ctx.fillStyle = color;
-    this.ctx.fillRect(x - width, y - 15, 1 + width, 30);
+    this.ctx.fillRect(x - width, y - 15, 1 + width, 31);
     if (msecs >= msecMax) {
       this.ctx.fillStyle = '#f00';
       this.ctx.fillRect(x - 1 - width, y - 5, 2 + width, 20);
@@ -342,7 +342,10 @@ async function startPickingMlabSite() {
     results.sort((a, b) => (a.rtt - b.rtt));
     console.log(results);
 
-    // Pick an entry at least one city away
+    // Pick a desirable entry.
+    // The "fastest" server seems like an obvious choice, but it might not
+    // test the "real" long-distance Internet link quality, so we opt for
+    // something a little further away.
     let best = results[1];
     dnsName = best.site;
     $('#internetlegend').html('&#x275a; ' + best.where);
@@ -380,9 +383,9 @@ let tryFastSites = [
 let curFastSite = 0;
 let fastest;
 
-function doneFastSite(ok, host, url, start_time) {
+function doneFastSite(ok, result, host, url, start_time) {
   let delay = now() - start_time;
-  console.debug('doneFastSite: ok=' + ok + ' delay=' + delay + ' ' + url);
+  console.log('doneFastSite: ok=' + ok + ' delay=' + delay + ' ' + url, result);
   if (ok && (!fastest || delay < fastest[0])) {
     fastest = [delay, host, url];
   }
@@ -405,9 +408,10 @@ function nextFastSite() {
   let url = 'http://' + host + ':8999/generate_204';
   let start_time = now();
   startFetch(url, 200).then(function(response) {
-    doneFastSite(response.ok, host, url, start_time);
-  }, function() {
-    doneFastSite(false, host, url, start_time);
+    doneFastSite(response.ok, response, host, url, start_time);
+  }, function(e) {
+    let ok = e instanceof TypeError
+    doneFastSite(ok, e, host, url, start_time);
   });
 }
 
