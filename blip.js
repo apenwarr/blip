@@ -192,11 +192,12 @@ let startBlips = function() {
       let url = blip.url;
       if (!blip.url) {
         // Desired URL format:
-        //   [method://][rand].random.[ndt_host].blipdns.apenwarr.ca[suffix]
-        let g = dnsName.match(/(^[^\/]*\/\/)([^:\/]*)(.*)/);
-        url = (g[1] + Math.random() +
-               'random.' + g[2] + '.blipdns.apenwarr.ca' + g[3]);
-      }
+        //   http://x<rand>.<ndt_site>.blipdns.apenwarr.ca:<port>
+        url = 'http://' +
+                'x' + Math.floor(Math.random()*1e9) +
+                '.' + dnsName +
+                '.blipdns.apenwarr.ca';
+        }
 
       startFetch(url, msecMax).then(result, result);
     }
@@ -252,7 +253,7 @@ let addGstatic = function() {
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-function startPickingMlabSite() {
+async function startPickingMlabSite() {
   fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all').then(async function(response) {
     // We want the selected hostname to be reasonably stable across page reloads
     // from a single location, even on separate devices.  To help with this,
@@ -277,19 +278,23 @@ function startPickingMlabSite() {
     console.log('m-lab index:', ndt);
     let hosts = [];
     for (let i in ndt) {
-      hosts.push([ndt[i].country, ndt[i].city, ndt[i].fqdn]);
+      hosts.push({
+        country: ndt[i].country,
+        city: ndt[i].city,
+        fqdn: ndt[i].fqdn,
+        site: ndt[i].site,
+      });
     }
     hosts.sort();
     let one_per_country = {};
     for (let i in hosts) {
-      let country = hosts[i][0];
-      let city = hosts[i][1];
-      let url = 'https://' + hosts[i][2];
-      if (!one_per_country[country]) {
-        one_per_country[country] = {
-          where: city + ', ' + country,
-          url: url,
-          rttList: []
+      let h = hosts[i];
+      if (!one_per_country[h.country]) {
+        one_per_country[h.country] = {
+          where: h.city + ', ' + h.country,
+          url: 'https://' + h.fqdn,
+          site: h.site,
+          rttList: [],
         };
       }
     }
@@ -324,7 +329,7 @@ function startPickingMlabSite() {
                 console.log(results);
                 // Pick an entry at least one city away
                 let best = results[1];
-                dnsName = best.url;
+                dnsName = best.site;
                 $('#internetlegend').text('o ' + best.where);
                 addBlip(internetColor, best.url, 5);
               }
