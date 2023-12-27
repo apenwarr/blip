@@ -238,14 +238,79 @@ function toggleDns() {
   wantDns = dnsName && !wantDns;
 };
 
-// If you're modifying blip and you significantly
-// change the kind of traffic it generates, especially if you change the
-// mindelay calculation (see above), then please be a good Internet citizen
-// and find a different server to ping.
-//     -- apenwarr, 2013/04/26
-function addGstatic() {
-  addBlip(localColor, 'http://gstatic.com/generate_204', 0);
-};
+async function pickBestSite(hosts, minNeeded, maxParallel) {
+  let hostsFinished = 0;
+  let promiseDone;
+  let promise = new Promise((resolve, reject) => { promiseDone = resolve; });
+  let queue = [];
+
+  for (let h of hosts) {
+    h.minRTT = 1e6;
+    h.nProbes = 0;
+  }
+
+  let runTest = async function(h) {
+    const startTime = now();
+    try {
+      await startFetch(h.url, msecMax * 1.5);
+    }
+    catch (e) {
+      if (!(e instanceof TypeError)) {
+        // timed out, or some non-network error
+        console.log('Server check failed:', h, e);
+        if (queue.length > 0) {
+          return runTest(queue.shift());
+        }
+        hostsFinished++;
+        return;
+      }
+      // otherwise fall through and consider the probe to have passed
+    }
+
+    const rtt = now() - startTime;
+    if (rtt < h.minRTT) {
+      h.minRTT = rtt;
+    }
+    h.nProbes++;
+
+    // try each host 3 times
+    if (h.nProbes < 3) {
+      queue.push(h);
+    } else {
+      hostsFinished++;
+      if (hostsFinished <= minNeeded) {
+        console.log('Tested #' + hostsFinished +
+            ' (target ' + minNeeded + '):',
+            Math.round(h.minRTT) + 'ms',
+            h.label, 'qlen', queue.length);
+      }
+      if (hostsFinished == minNeeded) {
+        promiseDone();
+      }
+    }
+
+    if (queue.length > 0 && hostsFinished < minNeeded) {
+      runTest(queue.shift());
+    }
+  }
+
+  for (let hi in hosts) {
+    queue.push(hosts[hi]);
+  }
+
+  // start the first few tests in parallel
+  for (let i = 0; i < maxParallel && queue.length > 0; i++) {
+    runTest(queue.shift());
+  }
+
+  await promise;
+
+  // when done enough of them...
+  hosts.sort((a, b) => (a.minRTT - b.minRTT));
+  console.log('pickBest', hosts);
+
+  return hosts;
+}
 
 // Pick an Internet site with reasonably high latency (at least, higher than
 // the usually-very-low-latency gstatic.com) to add contrast to the graph.
@@ -254,7 +319,7 @@ function addGstatic() {
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-async function startPickingMlabSite() {
+async function pickMlabSite() {
   let response = await fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all');
 
   // We want the selected hostname to be reasonably stable across page reloads
@@ -283,138 +348,70 @@ async function startPickingMlabSite() {
     let k = h.country + ' ' + h.city;
     if (!hosts[k]) {
       hosts[k] = {
-        where: h.city + ', ' + h.country,
+        label: h.city + ', ' + h.country,
         url: 'https://' + h.fqdn,
         site: h.site,
-        rtt: 1e6,
-        n: 0,
       };
     }
   }
 
-  let hostsFinished = 0;
+  // convert dict back into a list
+  hosts = getValues(hosts);
+
   const need1 = Math.floor(Object.keys(hosts).length / 4), need2 = 10;
-  const needHosts = need1 < need2 ? need2 : need1;
-  let pickBest;
-  let queue = [];
+  const minNeeded = need1 < need2 ? need2 : need1;
+  const maxParallel = 20;
 
-  let runTest = async function(h) {
-    const startTime = now();
-    try {
-      await startFetch(h.url, msecMax);
-    }
-    catch (e) {
-      //console.log('Server check failed:', h.url, e);
-      if (queue.length > 0) {
-        return runTest(queue.shift());
-      }
-      return;
-    }
-    const rtt = now() - startTime;
-    if (rtt < h.rtt) {
-      h.rtt = rtt;
-    }
-    h.n++;
+  let results = await pickBestSite(hosts, minNeeded, maxParallel);
 
-    // try each host 3 times
-    if (h.n < 3) {
-      queue.push(h);
-    } else {
-      hostsFinished++;
-      if (hostsFinished <= needHosts) {
-        console.log('Tested #' + hostsFinished +
-            ' (target ' + needHosts + '):',
-            Math.round(h.rtt) + 'ms',
-            h.where, 'qlen', queue.length);
-      }
-      if (hostsFinished == needHosts) {
-        pickBest();
-      }
-    }
-
-    if (queue.length > 0 && hostsFinished < needHosts) {
-      runTest(queue.shift());
-    }
-  }
-
-  // when done enough of them...
-  pickBest = function() {
-    console.log('pickBest', hosts);
-    let results = getValues(hosts);
-    results.sort((a, b) => (a.rtt - b.rtt));
-    console.log(results);
-
-    // Pick a desirable entry.
-    // The "fastest" server seems like an obvious choice, but it might not
-    // test the "real" long-distance Internet link quality, so we opt for
-    // something a little further away.
-    let best = results[1];
-    dnsName = best.site;
-    $('#internetlegend').html('&#x275a; ' + best.where);
-    addBlip(internetColor, best.url, 5);
-  }
-
-  for (let hi in hosts) {
-    queue.push(hosts[hi]);
-  }
-
-  // start the first few tests in parallel
-  for (let i = 0; i < 20; i++) {
-    runTest(queue.shift());
-  }
+  // Pick a desirable entry.
+  // The "fastest" server seems like an obvious choice, but it might not
+  // test the "real" long-distance Internet link quality, so we opt for
+  // something a little further away.
+  let best = results[1];
+  dnsName = best.site;
+  $('#internetlegend').html('&#x275a; ' + best.label);
+  addBlip(internetColor, best.url, 5);
 }
 
-let tryFastSites = [
-  '192.168.0.1',
-  '192.168.0.254',
-  '192.168.1.1',
-  '192.168.1.254',
-  '192.168.2.1',
-  '192.168.2.254',
-  '192.168.3.1',
-  '192.168.3.254',
-  '192.168.4.1',
-  '192.168.4.254',
-  '10.0.0.1',
-  '10.0.0.254',
-  '10.1.1.1',
-  '10.1.1.254',
-  '10.33.4.1',
-  '10.33.4.254'
-];
-let curFastSite = 0;
-let fastest;
+async function pickLocalSite() {
+  let tryFastSites = [
+    '192.168.0.1',
+    '192.168.1.1',
+    '192.168.2.1',
+    '192.168.3.1',
+    '192.168.4.1',
+    '10.0.0.1',
+    '10.1.1.1',
+    'gstatic.com',
+  ];
 
-function doneFastSite(ok, result, host, url, start_time) {
-  let delay = now() - start_time;
-  console.log('doneFastSite: ok=' + ok + ' delay=' + delay + ' ' + url, result);
-  if (ok && (!fastest || delay < fastest[0])) {
-    fastest = [delay, host, url];
-  }
-  curFastSite++;
-  if (curFastSite < tryFastSites.length) {
-    nextFastSite();
-  } else {
-    if (fastest) {
-      $('#locallegend').html('&#x275a; ' + fastest[1]);
-      addBlip(localColor, fastest[2], 0);
-    } else {
-      $('#locallegend').html('&#x275a; gstatic.com');
-      addGstatic();
-    }
-  }
-}
+  // Add the internet-facing client IP address (ie. after NATting).
+  // This is not quite as good as the local router IP, but seems to
+  // generally work pretty well as long as your ISP gives Connection Refused
+  // instead of blackholing TCP connection requests.
+  let cipr = await (await fetch('https://apenwarr.ca/blip/clientip')).json();
+  let cip = cipr['client_ip'];
+  console.log('clientip', cip);
+  tryFastSites.unshift(cip);
 
-function nextFastSite() {
-  let host = tryFastSites[curFastSite];
-  let url = 'http://' + host + ':8999/generate_204';
-  let start_time = now();
-  startFetch(url, 400).then(function(response) {
-    doneFastSite(response.ok, response, host, url, start_time);
-  }, function(e) {
-    let ok = e instanceof TypeError
-    doneFastSite(ok, e, host, url, start_time);
-  });
+  let hosts = [];
+  for (let s of tryFastSites) {
+    hosts.push({
+      label: s,
+      url: (s=='gstatic.com'
+            ? 'http://' + s + '/generate_204'
+            : 'http://' + s + ':8999/generate_204'),
+    });
+  }
+
+  const minNeeded = 1, maxParallel = 20;
+
+  let results = await pickBestSite(hosts, minNeeded, maxParallel);
+
+  let fastest = results[0];
+  $('#locallegend').html('&#x275a; ' + fastest.label);
+  addBlip(localColor, fastest.url, 0);
 }
 
 async function start() {
@@ -427,14 +424,9 @@ async function start() {
   // this starts the polling and animation
   bestNextFrame(gotTick);
 
-  // this will async add the "Internet" blip
-  startPickingMlabSite();
-
   // this will async add the "local-ish" blip
-  let cipr = await fetch('https://apenwarr.ca/blip/clientip');
-  let ciprj = await cipr.json();
-  let cip = ciprj['client_ip'];
-  console.log('clientip', cip);
-  tryFastSites.unshift(cip);
-  nextFastSite();
+  await pickLocalSite();
+
+  // this will async add the "Internet" blip
+  await pickMlabSite();
 }
