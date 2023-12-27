@@ -68,7 +68,7 @@ function BlipCanvas(canvas, width) {
   this.xdiv = width / 1000;
 
   this.drawYAxis = function() {
-    let labels = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+    let labels = [0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
     this.ctx.fillStyle = 'black';
     this.ctx.textBaseline = 'middle';
     this.ctx.textAlign = 'right';
@@ -112,7 +112,7 @@ function BlipCanvas(canvas, width) {
 
   this.msecToY = function(msecs) {
     return this.canvas.height -
-        (Math.log(msecs) * this.canvas.height / log_msecMax);
+        (Math.log(msecs + 1.1) * this.canvas.height / log_msecMax);
   };
 
   this.drawBlip = function(color, startTime, endTime, minlatency, width) {
