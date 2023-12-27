@@ -183,6 +183,17 @@ let gotBlip = function(color, url, minlatency, startTime) {
   addBlip(color, url, minlatency);
 };
 
+let startFetch = function(url, msecTimeout) {
+  return fetch(url, {
+    method: 'GET',
+    mode: 'no-cors',
+    body: null,
+    cache: 'no-cache',
+    priority: 'high',
+    signal: AbortSignal.timeout(msecTimeout),
+  });
+}
+
 let startBlips = function() {
   while (blips.length) {
     let blip = blips.shift();
@@ -211,11 +222,8 @@ let startBlips = function() {
         url = (g[1] + Math.random() +
                'random.' + g[2] + '.blipdns.apenwarr.ca' + g[3]);
       }
-      $.ajax({
-        'url': url,
-        crossDomain: false,
-        timeout: range
-      }).complete(result);
+
+      startFetch(url, range).then(result, result);
     }
   }
 };
@@ -284,10 +292,7 @@ addBlip(dnsColor, null, 5);
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-$.ajax({
-  'url': 'https://mlab-ns.appspot.com/ndt_ssl?policy=all',
-  crossDomain: true,
-}).success(function(ndt) {
+fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all').then(async function(response) {
   // We want the selected hostname to be reasonably stable across page reloads
   // from a single location, even on separate devices.  To help with this,
   // choose only from the first server in the first city in each country.
@@ -303,6 +308,12 @@ $.ajax({
   //   NA              Seattle_WA-US, New York_NY-US
   //   SA              Bogota-CO
   //
+  if (!response.ok) {
+    console.error('m-lab response error:', response);
+    return;
+  }
+  let ndt = await response.json();
+  console.log('m-lab index:', ndt);
   let hosts = [];
   for (let i in ndt) {
     hosts.push([ndt[i].country, ndt[i].city, ndt[i].fqdn]);
@@ -330,13 +341,13 @@ $.ajax({
         let v = one_per_country[ci];
         let startTime = now();
         outstanding++;
-        $.ajax({
-          'url': v.url,
-          crossDomain: false,
-          timeout: range
-        }).complete(function() {
-          v.rttList.push(now() - startTime);
+        let then = function(ok) {
           outstanding--;
+          if (ok) {
+            v.rttList.push(now() - startTime);
+          } else {
+            console.log('too slow:', v.url);
+          }
           console.log('outstanding', outstanding);
           if (!outstanding) {
             roundsDone++;
@@ -357,7 +368,8 @@ $.ajax({
               addBlip(internetColor, best.url, 5);
             }
           }
-        });
+        }
+        startFetch(v.url, range).then(() => then(true), () => then(false));
       })();
     }
   };
@@ -386,10 +398,10 @@ let tryFastSites = [
 let curFastSite = 0;
 let fastest;
 
-function doneFastSite(reason, host, url, start_time) {
+function doneFastSite(ok, host, url, start_time) {
   let delay = now() - start_time;
-  console.debug(reason + ' delay=' + delay + ' ' + url);
-  if (reason != 'timeout' && (!fastest || delay < fastest[0])) {
+  console.debug('doneFastSite: ok=' + ok + ' delay=' + delay + ' ' + url);
+  if (ok && (!fastest || delay < fastest[0])) {
     fastest = [delay, host, url];
   }
   curFastSite++;
@@ -410,12 +422,10 @@ function nextFastSite() {
   let host = tryFastSites[curFastSite];
   let url = 'http://' + host + ':8999/generate_204';
   let start_time = now();
-  $.ajax({
-    'url': url,
-    crossDomain: false,
-    timeout: 200
-  }).complete(function(e, reason) {
-    doneFastSite(reason, host, url, start_time);
+  startFetch(url, 200).then(function(response) {
+    doneFastSite(response.ok, host, url, start_time);
+  }, function() {
+    doneFastSite(false, host, url, start_time);
   });
 }
 nextFastSite();
