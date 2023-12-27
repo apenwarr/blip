@@ -256,93 +256,94 @@ function addGstatic() {
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
 async function startPickingMlabSite() {
-  fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all').then(async function(response) {
-    // We want the selected hostname to be reasonably stable across page reloads
-    // from a single location, even on separate devices.  To help with this,
-    // choose only from the first server in the first city in each country.
-    // The latency between countries is hopefully different enough that there
-    // should be little jitter.
-    //
-    // TODO(apenwarr): think about reducing the country list to 2 per region?
-    //   Africa          Johannesburg-ZA, Nairobi-KE
-    //   Australia       Auckland-NZ
-    //   Asia            Bangkok-TH, Taipei-TW
-    //   Western EU      Dublin-IE, Stockholm-SE
-    //   Eastern EU      Belgrade-RS
-    //   NA              Seattle_WA-US, New York_NY-US
-    //   SA              Bogota-CO
-    //
-    if (!response.ok) {
-      console.error('m-lab response error:', response);
+  let response = await fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all');
+
+  // We want the selected hostname to be reasonably stable across page reloads
+  // from a single location, even on separate devices.  To help with this,
+  // choose only from the first server in the first city in each country.
+  // The latency between countries is hopefully different enough that there
+  // should be little jitter.
+  if (!response.ok) {
+    console.error('m-lab response error:', response);
+    return;
+  }
+
+  let ndt = await response.json();
+  console.log('m-lab index:', ndt);
+
+  let hosts = [];
+  for (let n of ndt) {
+    // put the sort keys in the desired order
+    hosts.push([n.country, n.city, n.site, n.fqdn, n]);
+  }
+  hosts.sort();
+
+  let one_per_country = {};
+  for (let i in hosts) {
+    let h = hosts[i][4];
+    if (!one_per_country[h.country]) {
+      one_per_country[h.country] = {
+        where: h.city + ', ' + h.country,
+        url: 'https://' + h.fqdn,
+        site: h.site,
+        rtt: 1e6,
+        n: 0,
+      };
+    }
+  }
+
+  let hostsFinished = 0;
+  const needHosts = Math.floor(Object.keys(one_per_country).length / 2);
+  let pickBest;
+
+  let runTest = async function(h) {
+    const startTime = now();
+    let r;
+    try {
+      r = await startFetch(h.url, msecMax);
+    }
+    catch (e) {
+      console.log('Server check failed:', h.url, e);
       return;
     }
-    let ndt = await response.json();
-    console.log('m-lab index:', ndt);
-    let hosts = [];
-    for (let i in ndt) {
-      hosts.push({
-        country: ndt[i].country,
-        city: ndt[i].city,
-        fqdn: ndt[i].fqdn,
-        site: ndt[i].site,
-      });
+    const rtt = now() - startTime;
+    if (rtt < h.rtt) {
+      h.rtt = rtt;
     }
-    hosts.sort();
-    let one_per_country = {};
-    for (let i in hosts) {
-      let h = hosts[i];
-      if (!one_per_country[h.country]) {
-        one_per_country[h.country] = {
-          where: h.city + ', ' + h.country,
-          url: 'https://' + h.fqdn,
-          site: h.site,
-          rttList: [],
-        };
-      }
+    h.n++;
+
+    // try each host 3 times
+    if (h.n < 3 && hostsFinished < needHosts) {
+      return runTest(h);
     }
 
-    let roundsDone = 0;
-    let outstanding = 0;
-    let doRound = function() {
-      for (let ci in one_per_country) {
-        (function() {
-          let v = one_per_country[ci];
-          let startTime = now();
-          outstanding++;
-          let then = function(ok) {
-            outstanding--;
-            if (ok) {
-              v.rttList.push(now() - startTime);
-            } else {
-              console.log('too slow:', v.url);
-            }
-            console.log('outstanding', outstanding);
-            if (!outstanding) {
-              roundsDone++;
-              if (roundsDone < 3) {
-                doRound();
-              } else {
-                console.log(one_per_country);
-                let results = getValues(one_per_country);
-                results.sort(function(a, b) {
-                  return (Math.min.apply(Math, a.rttList) -
-                          Math.min.apply(Math, b.rttList));
-                });
-                console.log(results);
-                // Pick an entry at least one city away
-                let best = results[1];
-                dnsName = best.site;
-                $('#internetlegend').html('&#x275a; ' + best.where);
-                addBlip(internetColor, best.url, 5);
-              }
-            }
-          }
-          startFetch(v.url, msecMax).then(() => then(true), () => then(false));
-        })();
-      }
-    };
-    doRound();
-  });
+    hostsFinished++;
+    console.log('Tested #' + hostsFinished + ':',
+        Math.round(h.rtt) + 'ms',
+        h.where);
+    if (hostsFinished == needHosts) {
+      pickBest();
+    }
+  }
+
+  // when done enough of them...
+  pickBest = function() {
+    console.log('pickBest', one_per_country);
+    let results = getValues(one_per_country);
+    results.sort((a, b) => (a.rtt - b.rtt));
+    console.log(results);
+
+    // Pick an entry at least one city away
+    let best = results[1];
+    dnsName = best.site;
+    $('#internetlegend').html('&#x275a; ' + best.where);
+    addBlip(internetColor, best.url, 5);
+  }
+
+  for (let ci in one_per_country) {
+    let h = one_per_country[ci];
+    runTest(h);
+  }
 }
 
 let tryFastSites = [
