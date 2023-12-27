@@ -36,7 +36,7 @@ if (window.performance && window.performance.now) {
 
 // Sigh, not all browsers have Object.values yet.  Use the shim
 // unconditionally to avoid any obscure incompatibilities.
-let getValues = function(obj) {
+function getValues(obj) {
   let out = [];
   for (let i in obj) {
     out.push(obj[i]);
@@ -57,7 +57,8 @@ const absolute_mindelay = 10;
 let mindelay = absolute_mindelay;
 let lastBotch = 0;
 
-let BlipCanvas = function(canvas, width) {
+// constructor
+function BlipCanvas(canvas, width) {
   this.canvas = canvas;
   this.canvas.width = 1000;
   this.canvas.height = 1000;
@@ -140,25 +141,26 @@ let BlipCanvas = function(canvas, width) {
   };
 };
 
-let c1 = new BlipCanvas($('#hires')[0], 1000);
-let c2 = new BlipCanvas($('#lores')[0], 10000);
-let c3 = new BlipCanvas($('#vlores')[0], 100000);
+const c1 = new BlipCanvas($('#hires')[0], 1000);
+const c2 = new BlipCanvas($('#lores')[0], 10000);
+const c3 = new BlipCanvas($('#vlores')[0], 100000);
 
-let blips = [];
+const blips = [];
 
-let addBlip = function(color, url, minlatency) {
+function addBlip(color, url, minlatency) {
   blips.push({color: color, url: url, minlatency: minlatency});
 };
 
-let gotBlip = function(color, url, minlatency, startTime) {
-  let endTime = now();
-  c1.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
-  c2.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
-  c3.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
+function gotBlip(color, url, minlatency, startTime) {
+  const endTime = now();
+  const blipWidth = url ? 1 : 3;
+  c1.drawBlip(color, startTime, endTime, minlatency, blipWidth);
+  c2.drawBlip(color, startTime, endTime, minlatency, blipWidth);
+  c3.drawBlip(color, startTime, endTime, minlatency, blipWidth);
   addBlip(color, url, minlatency);
 };
 
-let startFetch = function(url, msecTimeout) {
+function startFetch(url, msecTimeout) {
   return fetch(url, {
     method: 'GET',
     mode: 'no-cors',
@@ -169,7 +171,7 @@ let startFetch = function(url, msecTimeout) {
   });
 }
 
-let startBlips = function() {
+function startBlips() {
   while (blips.length) {
     let blip = blips.shift();
     if (!blip.url && !wantDns) {
@@ -205,7 +207,7 @@ let startBlips = function() {
 };
 
 let lastTick = now(), lastStart = lastTick;
-let gotTick = function() {
+function gotTick() {
   let t = now();
   let tdiff = t - lastTick;
   if (running) {
@@ -223,7 +225,7 @@ let gotTick = function() {
   }
 };
 
-let toggleBlip = function() {
+function toggleBlip() {
   if (running) {
     running = 0;
   } else {
@@ -233,7 +235,7 @@ let toggleBlip = function() {
   }
 };
 
-let toggleDns = function() {
+function toggleDns() {
   wantDns = dnsName && !wantDns;
 };
 
@@ -242,7 +244,7 @@ let toggleDns = function() {
 // mindelay calculation (see above), then please be a good Internet citizen
 // and find a different server to ping.
 //     -- apenwarr, 2013/04/26
-let addGstatic = function() {
+function addGstatic() {
   addBlip(localColor, 'http://gstatic.com/generate_204', 0);
 };
 
