@@ -285,7 +285,7 @@ addBlip(dnsColor, null, 5);
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
 $.ajax({
-  'url': 'https://mlab-ns.appspot.com/ndt?policy=all',
+  'url': 'https://mlab-ns.appspot.com/ndt_ssl?policy=all',
   crossDomain: true,
 }).success(function(ndt) {
   // We want the selected hostname to be reasonably stable across page reloads
@@ -305,14 +305,14 @@ $.ajax({
   //
   let hosts = [];
   for (let i in ndt) {
-    hosts.push([ndt[i].country, ndt[i].city, ndt[i].url]);
+    hosts.push([ndt[i].country, ndt[i].city, ndt[i].fqdn]);
   }
   hosts.sort();
   let one_per_country = {};
   for (let i in hosts) {
     let country = hosts[i][0];
     let city = hosts[i][1];
-    let url = hosts[i][2];
+    let url = 'https://' + hosts[i][2];
     if (!one_per_country[country]) {
       one_per_country[country] = {
         where: city + ', ' + country,
