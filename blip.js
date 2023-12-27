@@ -193,8 +193,8 @@ function startBlips() {
       let url = blip.url;
       if (!blip.url) {
         // Desired URL format:
-        //   http://x<rand>.<ndt_site>.blipdns.apenwarr.ca:<port>
-        url = 'http://' +
+        //   https://x<rand>.<ndt_site>.blipdns.apenwarr.ca:<port>
+        url = 'https://' +
                 'x' + Math.floor(Math.random()*1e9) +
                 '.' + dnsName +
                 '.blipdns.apenwarr.ca';
