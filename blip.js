@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 'use strict';
-var running = true;
-var wantDns = false;
-var dnsName;
-var now;
+let running = true;
+let wantDns = false;
+let dnsName;
+let now;
 if (window.performance && window.performance.now) {
   now = function() { return window.performance.now(); };
 } else {
@@ -26,29 +26,29 @@ if (window.performance && window.performance.now) {
 
 // Sigh, not all browsers have Object.values yet.  Use the shim
 // unconditionally to avoid any obscure incompatibilities.
-var getValues = function(obj) {
-  var out = [];
-  for (var i in obj) {
+let getValues = function(obj) {
+  let out = [];
+  for (let i in obj) {
     out.push(obj[i]);
   }
   return out;
 };
 
-var nextFrame =
+let nextFrame =
     window.requestAnimationFrame ||
     window.webkitRequestAnimationFrame ||
     window.mozRequestAnimationFrame ||
     function(callback) {
       setTimeout(callback, 1000 / 60);
     };
-var range = 2200;
-var log_range = Math.log(range * 1.5);
-var default_delay = 1000;
-var absolute_mindelay = 10;
-var mindelay = default_delay;
-var lastBotch = 0;
+let range = 2200;
+let log_range = Math.log(range * 1.5);
+let default_delay = 1000;
+let absolute_mindelay = 10;
+let mindelay = default_delay;
+let lastBotch = 0;
 
-var updateMinDelay = function() {
+let updateMinDelay = function() {
   // Hi there!  This program is open source, so you have the ability to make
   // your own copy of it, which might change or remove this mindelay
   // calculation.  However, if you do that, you might unintentionally cause
@@ -58,7 +58,7 @@ var updateMinDelay = function() {
   // and then it's your problem.  Thanks!
   //    -- apenwarr, 2013/04/26
   $.getJSON('https://gfblip.appspot.com/mindelay?callback=?', function(data) {
-    var newdelay = parseInt(data);
+    let newdelay = parseInt(data);
     if (newdelay >= absolute_mindelay) {
       mindelay = newdelay;
     } else {
@@ -73,7 +73,7 @@ var updateMinDelay = function() {
 };
 updateMinDelay();
 
-var BlipCanvas = function(canvas, width) {
+let BlipCanvas = function(canvas, width) {
   this.canvas = canvas;
   this.canvas.width = 1000;
   this.canvas.height = 1000;
@@ -83,13 +83,13 @@ var BlipCanvas = function(canvas, width) {
   this.xdiv = width / 1000;
 
   this.drawYAxis = function() {
-    var labels = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
+    let labels = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
     this.ctx.fillStyle = 'black';
     this.ctx.textBaseline = 'middle';
     this.ctx.textAlign = 'right';
     this.ctx.font = '32px Arial';
-    for (var i = 0; i < labels.length; i++) {
-      var msecs = labels[i];
+    for (let i = 0; i < labels.length; i++) {
+      let msecs = labels[i];
       this.ctx.fillText(msecs, (this.xofs - 10), this.msecToY(msecs));
     }
     this.ctx.scale(1, 2);
@@ -102,12 +102,12 @@ var BlipCanvas = function(canvas, width) {
   };
 
   this.nextX = function(msecs) {
-    var steps = msecs / absolute_mindelay;
+    let steps = msecs / absolute_mindelay;
     if (steps > 100) {
       steps = 100;
     }
-    var x_inc = steps / this.xdiv;
-    var new_x = (this.current_x + x_inc) % (this.canvas.width - this.xofs);
+    let x_inc = steps / this.xdiv;
+    let new_x = (this.current_x + x_inc) % (this.canvas.width - this.xofs);
 
     // draw the new bar
     this.ctx.fillStyle = 'rgba(128,128,128,1.0)';
@@ -131,7 +131,7 @@ var BlipCanvas = function(canvas, width) {
   };
 
   this.drawBlip = function(color, startTime, endTime, minlatency, width) {
-    var msecs = endTime - startTime;
+    let msecs = endTime - startTime;
     if (msecs < minlatency) {
       // impossibly short; that implies we're not actually reaching the
       // remote end, probably because we're entirely offline
@@ -145,8 +145,8 @@ var BlipCanvas = function(canvas, width) {
       // we just want to show an error.
       msecs = range;
     }
-    var y = this.msecToY(msecs);
-    var x = this.current_x + this.xofs;
+    let y = this.msecToY(msecs);
+    let x = this.current_x + this.xofs;
     this.ctx.fillStyle = color;
     this.ctx.fillRect(x - width, y - 15, 1 + width, 30);
     if (msecs >= range) {
@@ -156,49 +156,49 @@ var BlipCanvas = function(canvas, width) {
   };
 };
 
-var c1 = new BlipCanvas($('#hires')[0], 1000);
-var c2 = new BlipCanvas($('#lores')[0], 10000);
-var c3 = new BlipCanvas($('#vlores')[0], 100000);
+let c1 = new BlipCanvas($('#hires')[0], 1000);
+let c2 = new BlipCanvas($('#lores')[0], 10000);
+let c3 = new BlipCanvas($('#vlores')[0], 100000);
 
-var blips = [];
+let blips = [];
 
-var addBlip = function(color, url, minlatency) {
+let addBlip = function(color, url, minlatency) {
   blips.push({color: color, url: url, minlatency: minlatency});
 };
 
-var gotBlip = function(color, url, minlatency, startTime) {
-  var endTime = now();
+let gotBlip = function(color, url, minlatency, startTime) {
+  let endTime = now();
   c1.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
   c2.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
   c3.drawBlip(color, startTime, endTime, minlatency, url ? 1 : 3);
   addBlip(color, url, minlatency);
 };
 
-var startBlips = function() {
+let startBlips = function() {
   while (blips.length) {
-    var blip = blips.shift();
+    let blip = blips.shift();
     if (!blip.url && !wantDns) {
-      var createResult = function(blip) {
+      let createResult = function(blip) {
         return function() {
           addBlip(blip.color, blip.url, blip.minlatency);
         }
       };
-      var result = createResult(blip);
+      let result = createResult(blip);
       setTimeout(result, 1000);
     } else {
-      var createResult = function(blip) {
-        var startTime = now();
-        var result = function() {
+      let createResult = function(blip) {
+        let startTime = now();
+        let result = function() {
           gotBlip(blip.color, blip.url, blip.minlatency, startTime);
         };
         return result;
       };
-      var result = createResult(blip);
-      var url = blip.url;
+      let result = createResult(blip);
+      let url = blip.url;
       if (!blip.url) {
         // Desired URL format:
         //   [method://][rand].random.[ndt_host].blipdns.apenwarr.ca[suffix]
-        var g = dnsName.match(/(^[^\/]*\/\/)([^:\/]*)(.*)/);
+        let g = dnsName.match(/(^[^\/]*\/\/)([^:\/]*)(.*)/);
         url = (g[1] + Math.random() +
                'random.' + g[2] + '.blipdns.apenwarr.ca' + g[3]);
       }
@@ -211,10 +211,10 @@ var startBlips = function() {
   }
 };
 
-var lastTick = now(), lastStart = lastTick;
-var gotTick = function() {
-  var t = now();
-  var tdiff = t - lastTick;
+let lastTick = now(), lastStart = lastTick;
+let gotTick = function() {
+  let t = now();
+  let tdiff = t - lastTick;
   if (running) {
     if (tdiff >= absolute_mindelay) {
       if (t - lastStart > mindelay) {
@@ -230,7 +230,7 @@ var gotTick = function() {
   }
 };
 
-var toggleBlip = function() {
+let toggleBlip = function() {
   if (running) {
     running = 0;
   } else {
@@ -240,7 +240,7 @@ var toggleBlip = function() {
   }
 };
 
-var toggleDns = function() {
+let toggleDns = function() {
   wantDns = dnsName && !wantDns;
 };
 
@@ -258,7 +258,7 @@ c1.drawYAxis();
 // mindelay calculation (see above), then please be a good Internet citizen
 // and find a different server to ping.
 //     -- apenwarr, 2013/04/26
-var addGstatic = function() {
+let addGstatic = function() {
   addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204', 0);
 };
 
@@ -294,16 +294,16 @@ $.ajax({
   //   NA              Seattle_WA-US, New York_NY-US
   //   SA              Bogota-CO
   //
-  var hosts = [];
-  for (var i in ndt) {
+  let hosts = [];
+  for (let i in ndt) {
     hosts.push([ndt[i].country, ndt[i].city, ndt[i].url]);
   }
   hosts.sort();
-  var one_per_country = {};
-  for (var i in hosts) {
-    var country = hosts[i][0];
-    var city = hosts[i][1];
-    var url = hosts[i][2];
+  let one_per_country = {};
+  for (let i in hosts) {
+    let country = hosts[i][0];
+    let city = hosts[i][1];
+    let url = hosts[i][2];
     if (!one_per_country[country]) {
       one_per_country[country] = {
         where: city + ', ' + country,
@@ -313,13 +313,13 @@ $.ajax({
     }
   }
 
-  var roundsDone = 0;
-  var outstanding = 0;
-  var doRound = function() {
-    for (var ci in one_per_country) {
+  let roundsDone = 0;
+  let outstanding = 0;
+  let doRound = function() {
+    for (let ci in one_per_country) {
       (function() {
-        var v = one_per_country[ci];
-        var startTime = now();
+        let v = one_per_country[ci];
+        let startTime = now();
         outstanding++;
         $.ajax({
           'url': v.url,
@@ -335,14 +335,14 @@ $.ajax({
               doRound();
             } else {
               console.log(one_per_country);
-              var results = getValues(one_per_country);
+              let results = getValues(one_per_country);
               results.sort(function(a, b) {
                 return (Math.min.apply(Math, a.rttList) -
                         Math.min.apply(Math, b.rttList));
               });
               console.log(results);
               // Pick an entry at least one city away
-              var best = results[1];
+              let best = results[1];
               dnsName = best.url;
               $('#internetlegend').text('o ' + best.where);
               addBlip('rgba(0,0,255,0.8)', best.url, 5);
@@ -356,7 +356,7 @@ $.ajax({
 });
 
 
-var tryFastSites = [
+let tryFastSites = [
   '192.168.0.1',
   '192.168.0.254',
   '192.168.1.1',
@@ -374,11 +374,11 @@ var tryFastSites = [
   '10.33.4.1',
   '10.33.4.254'
 ];
-var curFastSite = 0;
-var fastest;
+let curFastSite = 0;
+let fastest;
 
 function doneFastSite(reason, host, url, start_time) {
-  var delay = now() - start_time;
+  let delay = now() - start_time;
   console.debug(reason + ' delay=' + delay + ' ' + url);
   if (reason != 'timeout' && (!fastest || delay < fastest[0])) {
     fastest = [delay, host, url];
@@ -398,9 +398,9 @@ function doneFastSite(reason, host, url, start_time) {
 }
 
 function nextFastSite() {
-  var host = tryFastSites[curFastSite];
-  var url = 'http://' + host + ':8999/generate_204';
-  var start_time = now();
+  let host = tryFastSites[curFastSite];
+  let url = 'http://' + host + ':8999/generate_204';
+  let start_time = now();
   $.ajax({
     'url': url,
     crossDomain: false,
