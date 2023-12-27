@@ -332,7 +332,7 @@ async function startPickingMlabSite() {
                 // Pick an entry at least one city away
                 let best = results[1];
                 dnsName = best.site;
-                $('#internetlegend').text('o ' + best.where);
+                $('#internetlegend').html('&#x275a; ' + best.where);
                 addBlip(internetColor, best.url, 5);
               }
             }
@@ -377,10 +377,10 @@ function doneFastSite(ok, host, url, start_time) {
     nextFastSite();
   } else {
     if (fastest) {
-      $('#locallegend').html('o ' + fastest[1]);
+      $('#locallegend').html('&#x275a; ' + fastest[1]);
       addBlip(localColor, fastest[2], 0);
     } else {
-      $('#locallegend').html('o gstatic.com');
+      $('#locallegend').html('&#x275a; gstatic.com');
       addGstatic();
     }
   }
