@@ -271,18 +271,19 @@ async function startPickingMlabSite() {
   let ndt = await response.json();
   console.log('m-lab index:', ndt);
 
-  let hosts = [];
+  let allHosts = [];
   for (let n of ndt) {
     // put the sort keys in the desired order
-    hosts.push([n.country, n.city, n.site, n.fqdn, n]);
+    allHosts.push([n.country, n.city, n.site, n.fqdn, n]);
   }
-  hosts.sort();
+  allHosts.sort();
 
-  let one_per_country = {};
-  for (let i in hosts) {
-    let h = hosts[i][4];
-    if (!one_per_country[h.country]) {
-      one_per_country[h.country] = {
+  let hosts = {};
+  for (let i in allHosts) {
+    let h = allHosts[i][4];
+    let k = h.country + ' ' + h.city;
+    if (!hosts[k]) {
+      hosts[k] = {
         where: h.city + ', ' + h.country,
         url: 'https://' + h.fqdn,
         site: h.site,
@@ -293,7 +294,7 @@ async function startPickingMlabSite() {
   }
 
   let hostsFinished = 0;
-  const needHosts = Math.floor(Object.keys(one_per_country).length / 2);
+  const needHosts = Math.floor(Object.keys(hosts).length / 2);
   let pickBest;
 
   let runTest = async function(h) {
@@ -303,7 +304,7 @@ async function startPickingMlabSite() {
       r = await startFetch(h.url, msecMax);
     }
     catch (e) {
-      console.log('Server check failed:', h.url, e);
+      //console.log('Server check failed:', h.url, e);
       return;
     }
     const rtt = now() - startTime;
@@ -318,9 +319,11 @@ async function startPickingMlabSite() {
     }
 
     hostsFinished++;
-    console.log('Tested #' + hostsFinished + ':',
-        Math.round(h.rtt) + 'ms',
-        h.where);
+    if (hostsFinished <= needHosts) {
+      console.log('Tested #' + hostsFinished + ':',
+          Math.round(h.rtt) + 'ms',
+          h.where);
+    }
     if (hostsFinished == needHosts) {
       pickBest();
     }
@@ -328,8 +331,8 @@ async function startPickingMlabSite() {
 
   // when done enough of them...
   pickBest = function() {
-    console.log('pickBest', one_per_country);
-    let results = getValues(one_per_country);
+    console.log('pickBest', hosts);
+    let results = getValues(hosts);
     results.sort((a, b) => (a.rtt - b.rtt));
     console.log(results);
 
@@ -340,8 +343,8 @@ async function startPickingMlabSite() {
     addBlip(internetColor, best.url, 5);
   }
 
-  for (let ci in one_per_country) {
-    let h = one_per_country[ci];
+  for (let hi in hosts) {
+    let h = hosts[hi];
     runTest(h);
   }
 }
