@@ -162,9 +162,8 @@ function gotBlip(color, url, minlatency, startTime) {
 
 function startFetch(url, msecTimeout) {
   return fetch(url, {
-    method: 'GET',
+    method: 'HEAD',
     mode: 'no-cors',
-    body: null,
     cache: 'no-cache',
     priority: 'high',
     signal: AbortSignal.timeout(msecTimeout),
@@ -300,9 +299,8 @@ async function startPickingMlabSite() {
 
   let runTest = async function(h) {
     const startTime = now();
-    let r;
     try {
-      r = await startFetch(h.url, msecMax);
+      await startFetch(h.url, msecMax);
     }
     catch (e) {
       //console.log('Server check failed:', h.url, e);
