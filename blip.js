@@ -296,6 +296,7 @@ async function startPickingMlabSite() {
   let hostsFinished = 0;
   const needHosts = Math.floor(Object.keys(hosts).length / 2);
   let pickBest;
+  let queue = [];
 
   let runTest = async function(h) {
     const startTime = now();
@@ -305,6 +306,9 @@ async function startPickingMlabSite() {
     }
     catch (e) {
       //console.log('Server check failed:', h.url, e);
+      if (queue.length > 0) {
+        return runTest(queue.shift());
+      }
       return;
     }
     const rtt = now() - startTime;
@@ -314,18 +318,22 @@ async function startPickingMlabSite() {
     h.n++;
 
     // try each host 3 times
-    if (h.n < 3 && hostsFinished < needHosts) {
-      return runTest(h);
+    if (h.n < 3) {
+      queue.push(h);
+    } else {
+      hostsFinished++;
+      if (hostsFinished <= needHosts) {
+        console.log('Tested #' + hostsFinished + ':',
+            Math.round(h.rtt) + 'ms',
+            h.where, 'qlen', queue.length);
+      }
+      if (hostsFinished == needHosts) {
+        pickBest();
+      }
     }
 
-    hostsFinished++;
-    if (hostsFinished <= needHosts) {
-      console.log('Tested #' + hostsFinished + ':',
-          Math.round(h.rtt) + 'ms',
-          h.where);
-    }
-    if (hostsFinished == needHosts) {
-      pickBest();
+    if (queue.length > 0 && hostsFinished < needHosts) {
+      runTest(queue.shift());
     }
   }
 
@@ -344,8 +352,12 @@ async function startPickingMlabSite() {
   }
 
   for (let hi in hosts) {
-    let h = hosts[hi];
-    runTest(h);
+    queue.push(hosts[hi]);
+  }
+
+  // start the first few tests in parallel
+  for (let i = 0; i < 20; i++) {
+    runTest(queue.shift());
   }
 }
 
