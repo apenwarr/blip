@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 'use strict';
+
+const localColor = 'rgba(0,0,255,0.8)';
+const internetColor = 'rgba(0,128,0,0.8)';
+const dnsColor = 'rgba(0,0,0,1.0)';
+
+const vbarColor = 'rgba(128,128,128,1.0)';
+const vbarEraseColor = 'rgba(255,255,255,1.0)'
+
 let running = true;
 let wantDns = false;
 let dnsName;
+
 let now;
 if (window.performance && window.performance.now) {
   now = function() { return window.performance.now(); };
@@ -110,12 +119,12 @@ let BlipCanvas = function(canvas, width) {
     let new_x = (this.current_x + x_inc) % (this.canvas.width - this.xofs);
 
     // draw the new bar
-    this.ctx.fillStyle = 'rgba(128,128,128,1.0)';
+    this.ctx.fillStyle = vbarColor;
     this.ctx.fillRect(new_x + this.xofs + 1, 0,
                       4, this.canvas.height);
 
     // wipe out the old bar
-    this.ctx.fillStyle = 'rgba(255,255,255,1.0)';
+    this.ctx.fillStyle = vbarEraseColor;
     this.ctx.fillRect(this.current_x + this.xofs, 0,
                       x_inc + 1, this.canvas.height);
     if (new_x < this.current_x) {
@@ -259,14 +268,14 @@ c1.drawYAxis();
 // and find a different server to ping.
 //     -- apenwarr, 2013/04/26
 let addGstatic = function() {
-  addBlip('rgba(0,255,0,0.8)', 'http://gstatic.com/generate_204', 0);
+  addBlip(localColor, 'http://gstatic.com/generate_204', 0);
 };
 
 // This also ends up using Google resources, so see above.  But in this case,
 // we trigger a new DNS lookup every time, so it's a good test to see if
 // your DNS server is flakey.
 // TODO(apenwarr): figure out whether this is too impactful or not.
-addBlip('rgba(0,0,0,1.0)', null, 5);
+addBlip(dnsColor, null, 5);
 
 // Pick an Internet site with reasonably high latency (at least, higher than
 // the usually-very-low-latency gstatic.com) to add contrast to the graph.
@@ -345,7 +354,7 @@ $.ajax({
               let best = results[1];
               dnsName = best.url;
               $('#internetlegend').text('o ' + best.where);
-              addBlip('rgba(0,0,255,0.8)', best.url, 5);
+              addBlip(internetColor, best.url, 5);
             }
           }
         });
@@ -389,7 +398,7 @@ function doneFastSite(reason, host, url, start_time) {
   } else {
     if (fastest) {
       $('#locallegend').html('o ' + fastest[1]);
-      addBlip('rgba(0,192,0,0.8)', fastest[2], 0);
+      addBlip(localColor, fastest[2], 0);
     } else {
       $('#locallegend').html('o gstatic.com');
       addGstatic();
