@@ -1,5 +1,6 @@
 /*
  * Copyright 2013 Google Inc. All Rights Reserved.
+ * Copyright 2013 Avery Pennarun. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +44,7 @@ let getValues = function(obj) {
   return out;
 };
 
-let nextFrame =
+let bestNextFrame =
     window.requestAnimationFrame ||
     window.webkitRequestAnimationFrame ||
     window.mozRequestAnimationFrame ||
@@ -217,7 +218,7 @@ let gotTick = function() {
       c3.nextX(tdiff);
       lastTick = t;
     }
-    nextFrame(gotTick);
+    bestNextFrame(gotTick);
   }
 };
 
@@ -227,15 +228,13 @@ let toggleBlip = function() {
   } else {
     running = 1;
     lastTick = now();
-    nextFrame(gotTick);
+    bestNextFrame(gotTick);
   }
 };
 
 let toggleDns = function() {
   wantDns = dnsName && !wantDns;
 };
-
-c1.drawYAxis();
 
 // If you're modifying blip and you significantly
 // change the kind of traffic it generates, especially if you change the
@@ -246,12 +245,6 @@ let addGstatic = function() {
   addBlip(localColor, 'http://gstatic.com/generate_204', 0);
 };
 
-// This also ends up using Google resources, so see above.  But in this case,
-// we trigger a new DNS lookup every time, so it's a good test to see if
-// your DNS server is flakey.
-// TODO(apenwarr): figure out whether this is too impactful or not.
-addBlip(dnsColor, null, 5);
-
 // Pick an Internet site with reasonably high latency (at least, higher than
 // the usually-very-low-latency gstatic.com) to add contrast to the graph.
 //
@@ -259,90 +252,91 @@ addBlip(dnsColor, null, 5);
 // VPS somewhere.  If you overload it, I guess I'll be sort of impressed
 // that you like my program.  So, you know, whatever.
 //     -- apenwarr, 2013/04/26
-fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all').then(async function(response) {
-  // We want the selected hostname to be reasonably stable across page reloads
-  // from a single location, even on separate devices.  To help with this,
-  // choose only from the first server in the first city in each country.
-  // The latency between countries is hopefully different enough that there
-  // should be little jitter.
-  //
-  // TODO(apenwarr): think about reducing the country list to 2 per region?
-  //   Africa          Johannesburg-ZA, Nairobi-KE
-  //   Australia       Auckland-NZ
-  //   Asia            Bangkok-TH, Taipei-TW
-  //   Western EU      Dublin-IE, Stockholm-SE
-  //   Eastern EU      Belgrade-RS
-  //   NA              Seattle_WA-US, New York_NY-US
-  //   SA              Bogota-CO
-  //
-  if (!response.ok) {
-    console.error('m-lab response error:', response);
-    return;
-  }
-  let ndt = await response.json();
-  console.log('m-lab index:', ndt);
-  let hosts = [];
-  for (let i in ndt) {
-    hosts.push([ndt[i].country, ndt[i].city, ndt[i].fqdn]);
-  }
-  hosts.sort();
-  let one_per_country = {};
-  for (let i in hosts) {
-    let country = hosts[i][0];
-    let city = hosts[i][1];
-    let url = 'https://' + hosts[i][2];
-    if (!one_per_country[country]) {
-      one_per_country[country] = {
-        where: city + ', ' + country,
-        url: url,
-        rttList: []
-      };
+function startPickingMlabSite() {
+  fetch('https://mlab-ns.appspot.com/ndt_ssl?policy=all').then(async function(response) {
+    // We want the selected hostname to be reasonably stable across page reloads
+    // from a single location, even on separate devices.  To help with this,
+    // choose only from the first server in the first city in each country.
+    // The latency between countries is hopefully different enough that there
+    // should be little jitter.
+    //
+    // TODO(apenwarr): think about reducing the country list to 2 per region?
+    //   Africa          Johannesburg-ZA, Nairobi-KE
+    //   Australia       Auckland-NZ
+    //   Asia            Bangkok-TH, Taipei-TW
+    //   Western EU      Dublin-IE, Stockholm-SE
+    //   Eastern EU      Belgrade-RS
+    //   NA              Seattle_WA-US, New York_NY-US
+    //   SA              Bogota-CO
+    //
+    if (!response.ok) {
+      console.error('m-lab response error:', response);
+      return;
     }
-  }
+    let ndt = await response.json();
+    console.log('m-lab index:', ndt);
+    let hosts = [];
+    for (let i in ndt) {
+      hosts.push([ndt[i].country, ndt[i].city, ndt[i].fqdn]);
+    }
+    hosts.sort();
+    let one_per_country = {};
+    for (let i in hosts) {
+      let country = hosts[i][0];
+      let city = hosts[i][1];
+      let url = 'https://' + hosts[i][2];
+      if (!one_per_country[country]) {
+        one_per_country[country] = {
+          where: city + ', ' + country,
+          url: url,
+          rttList: []
+        };
+      }
+    }
 
-  let roundsDone = 0;
-  let outstanding = 0;
-  let doRound = function() {
-    for (let ci in one_per_country) {
-      (function() {
-        let v = one_per_country[ci];
-        let startTime = now();
-        outstanding++;
-        let then = function(ok) {
-          outstanding--;
-          if (ok) {
-            v.rttList.push(now() - startTime);
-          } else {
-            console.log('too slow:', v.url);
-          }
-          console.log('outstanding', outstanding);
-          if (!outstanding) {
-            roundsDone++;
-            if (roundsDone < 3) {
-              doRound();
+    let roundsDone = 0;
+    let outstanding = 0;
+    let doRound = function() {
+      for (let ci in one_per_country) {
+        (function() {
+          let v = one_per_country[ci];
+          let startTime = now();
+          outstanding++;
+          let then = function(ok) {
+            outstanding--;
+            if (ok) {
+              v.rttList.push(now() - startTime);
             } else {
-              console.log(one_per_country);
-              let results = getValues(one_per_country);
-              results.sort(function(a, b) {
-                return (Math.min.apply(Math, a.rttList) -
-                        Math.min.apply(Math, b.rttList));
-              });
-              console.log(results);
-              // Pick an entry at least one city away
-              let best = results[1];
-              dnsName = best.url;
-              $('#internetlegend').text('o ' + best.where);
-              addBlip(internetColor, best.url, 5);
+              console.log('too slow:', v.url);
+            }
+            console.log('outstanding', outstanding);
+            if (!outstanding) {
+              roundsDone++;
+              if (roundsDone < 3) {
+                doRound();
+              } else {
+                console.log(one_per_country);
+                let results = getValues(one_per_country);
+                results.sort(function(a, b) {
+                  return (Math.min.apply(Math, a.rttList) -
+                          Math.min.apply(Math, b.rttList));
+                });
+                console.log(results);
+                // Pick an entry at least one city away
+                let best = results[1];
+                dnsName = best.url;
+                $('#internetlegend').text('o ' + best.where);
+                addBlip(internetColor, best.url, 5);
+              }
             }
           }
-        }
-        startFetch(v.url, msecMax).then(() => then(true), () => then(false));
-      })();
-    }
-  };
-  doRound();
-});
-
+          startFetch(v.url, msecMax).then(() => then(true), () => then(false));
+        })();
+      }
+    };
+    doRound();
+  });
+}
 
 let tryFastSites = [
   '192.168.0.1',
@@ -395,6 +389,20 @@ function nextFastSite() {
     doneFastSite(false, host, url, start_time);
   });
 }
-nextFastSite();
 
-nextFrame(gotTick);
+function start() {
+  c1.drawYAxis();
+
+  // This one uses apenwarr.ca by default. Please be polite if modifying
+  // blip to send a lot more traffic than usual.
+  addBlip(dnsColor, null, 5);
+
+  // this will async add the "Internet" blip
+  startPickingMlabSite();
+
+  // this will async add the "local-ish" blip
+  nextFastSite();
+
+  // this starts the polling and animation
+  bestNextFrame(gotTick);
+}
