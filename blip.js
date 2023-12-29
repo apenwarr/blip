@@ -197,7 +197,7 @@ function startBlips() {
         url = 'https://' +
                 'x' + Math.floor(Math.random()*1e9) +
                 '.' + dnsName +
-                '.blipdns.apenwarr.ca';
+                '.blipdns.apenwarr.ca:8999';
         }
 
       startFetch(url, msecMax).then(result, result);
