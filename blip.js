@@ -51,7 +51,9 @@ let bestNextFrame =
     function(callback) {
       setTimeout(callback, 1000 / 60);
     };
-const msecMax = 2200;
+const brokenRTT = 1e6;      // RTT that means we didn't get valid answer
+const minReasonableRTT = 2; // browser might reject invalid URLs in < this time
+const msecMax = 2200;       // max timeout that fits on the chart
 const log_msecMax = Math.log(msecMax * 1.5);
 const absolute_mindelay = 10;
 let mindelay = absolute_mindelay;
@@ -240,35 +242,44 @@ function toggleDns() {
 
 async function pickBestSite(hosts, minNeeded, maxParallel) {
   let hostsFinished = 0;
+  let outstanding = 0;
   let promiseDone;
   let promise = new Promise((resolve, reject) => { promiseDone = resolve; });
   let queue = [];
 
   for (let h of hosts) {
-    h.minRTT = 1e6;
+    h.minRTT = brokenRTT;
     h.nProbes = 0;
   }
 
   let runTest = async function(h) {
     const startTime = now();
+    outstanding++;
     try {
       await startFetch(h.url, msecMax * 1.5);
     }
     catch (e) {
+      const rtt = now() - startTime;
       if (!(e instanceof TypeError)) {
         // timed out, or some non-network error
         console.log('Server check failed:', h, e);
         if (queue.length > 0) {
           return runTest(queue.shift());
         }
-        hostsFinished++;
+        // (don't increment hostsFinished here, since although this host is
+        // "finished" it didn't give valid results.)
+        outstanding--;
+        if (outstanding==0) {
+          promiseDone();
+        }
         return;
       }
       // otherwise fall through and consider the probe to have passed
     }
+    outstanding--;
 
     const rtt = now() - startTime;
-    if (rtt < h.minRTT) {
+    if (rtt < h.minRTT && rtt >= minReasonableRTT) {
       h.minRTT = rtt;
     }
     h.nProbes++;
@@ -277,14 +288,21 @@ async function pickBestSite(hosts, minNeeded, maxParallel) {
     if (h.nProbes < 3) {
       queue.push(h);
     } else {
-      hostsFinished++;
-      if (hostsFinished <= minNeeded) {
-        console.log('Tested #' + hostsFinished +
-            ' (target ' + minNeeded + '):',
-            Math.round(h.minRTT) + 'ms',
-            h.label, 'qlen', queue.length);
+      if (h.minRTT < brokenRTT) {
+        hostsFinished++;
+        if (hostsFinished <= minNeeded) {
+          console.log('Tested #' + hostsFinished +
+              ' (target ' + minNeeded + '):',
+              Math.round(h.minRTT) + 'ms',
+              h.label, 'qlen', queue.length, 'outstanding', outstanding);
+        }
+      } else {
+          console.log('Tested #(' + hostsFinished +
+              ') (target ' + minNeeded + '):',
+              '(too fast)' + 'ms',
+              h.label, 'qlen', queue.length, 'outstanding', outstanding);
       }
-      if (hostsFinished == minNeeded) {
+      if (hostsFinished == minNeeded || outstanding == 0) {
         promiseDone();
       }
     }
