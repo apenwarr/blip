@@ -418,8 +418,8 @@ async function pickLocalSite() {
     hosts.push({
       label: s,
       url: (s=='gstatic.com'
-            ? 'http://' + s + '/generate_204'
-            : 'http://' + s + ':8999/generate_204'),
+            ? 'https://' + s + '/generate_204'
+            : 'https://' + s + ':8999/generate_204'),
     });
   }
 
