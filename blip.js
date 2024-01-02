@@ -162,6 +162,15 @@ function gotBlip(color, url, minlatency, startTime) {
   addBlip(color, url, minlatency);
 };
 
+if (AbortSignal.timeout === undefined) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  AbortSignal.timeout = function(msec) {
+    setTimeout(() => controller.abort(), msec);
+    return signal;
+  }
+}
+
 function startFetch(url, msecTimeout) {
   return fetch(url, {
     method: 'HEAD',
