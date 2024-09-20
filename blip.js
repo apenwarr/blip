@@ -376,7 +376,7 @@ async function pickMlabSite() {
     if (!hosts[k]) {
       hosts[k] = {
         label: h.city + ', ' + h.country,
-        url: 'https://' + h.fqdn,
+        url: 'https://' + h.ip[0],
         site: h.site,
       };
     }
