@@ -4,7 +4,7 @@ Tip:
 ----
 
 On your PC, laptop, tablet, phone, or iPod, try adding a
-bookmark to http://gfblip.appspot.com/ to your home screen
+bookmark to https://gfblip.appspot.com/ to your home screen
 for easy access.
 
 <img src="qr.png">
@@ -13,10 +13,10 @@ for easy access.
 Too long, don't read:
 ---------------------
 
- - Go to http://gfblip.appspot.com/
+ - Go to https://gfblip.appspot.com/
 
  - It should work on any PC, laptop, tablet, phone, or iPod
-   with javascript and HTML canvas support (which means
+   with JavaScript and HTML canvas support (which means
    almost everything nowadays).
 
  - X axis is time. Y axis is milliseconds of latency.
@@ -37,7 +37,7 @@ Too long, don't read:
    per second, so you can notice very small variations.
 
  - If you watch the blip output while you do different
-   things (switch wifi networks, start Youtube videos
+   things (switch wifi networks, start YouTube videos
    playing, walk around), you can immediately see what
    impact that change has on the quality of your Internet
    connection.
@@ -95,14 +95,14 @@ Blip is an end-to-end testing tool designed to let you
 measure the latter two elements: latency and packet loss. 
 These are the real indicators of your web browsing
 performance.  It doesn't attempt to measure bandwidth; for
-that there's always good old http://speedtest.net/.  (By
+that there's always good old https://speedtest.net/.  (By
 the way, next time you're visiting speedtest.net, watch how
 the "download speedometer" dial starts off low and increases
 over time.  That's what I mean when I say you might be done
 downloading by the time "things get going.")
 
 How is blip an end-to-end tool?  Simple.  It's written in
-pure javascript, so it runs purely in your browser, without
+pure JavaScript, so it runs purely in your browser, without
 needing a server-side component.  It makes real requests to
 real http servers, rather than using synthetic "ping"
 packets.  Then it measures the turnaround time on those
@@ -170,15 +170,15 @@ The Stupid Part
 ---------------
 
 So you might be wondering, hey, how did you make a
-javascript applet ping these arbitrary servers?  What about
+JavaScript applet ping these arbitrary servers?  What about
 cross-domain request protection?
 
 Answer: I did it by just making the queries anyway, and
 seeing how long it takes to get the error message back that
 my request was refused because of cross-domain request
 protection.  Yes, this results in an infinite number of
-error messages to your javascript console.  Don't look at your
-javascript console and you'll be fine.  Trust me on this.
+error messages to your JavaScript console.  Don't look at your
+JavaScript console and you'll be fine.  Trust me on this.
 
 
 The Fiddly Bits
@@ -188,7 +188,7 @@ blip is open source software released under the Apache
 license.  See the file COPYING and comments inside the code
 for more details.
 
-You can get the source code at: http://github.com/apenwarr/blip
+You can get the source code at: https://github.com/apenwarr/blip
 
 If you want to discuss this tool, you can join the
 blip-users@googlegroups.com mailing list.  You don't need a
@@ -198,7 +198,7 @@ blip-users+subscribe@googlegroups.com and you can join.
 blip probably needs lots of fancy new features.  It's the
 first program I've ever written using HTML Canvas for
 display (which is really fun), so I probably did some dumb
-things.  Javascript is also not my first choice of
+things.  JavaScript is also not my first choice of
 programming language (yet?) so I probably did some even dumber
 things.  Send pull requests.  That is all.
 
